@@ -54,7 +54,7 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
     table = f"```\n{header_row}\n{value_row}\n{checkmark_row}\n```"
 
     # Emphasized Result Formatting
-    result_line = f"## **__RESULT:__ `{result['Result']}`**"
+    result_line = f"# **{result['Result']}**"
 
     # Create an embed message
     embed = discord.Embed(
