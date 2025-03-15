@@ -53,15 +53,20 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
     # Format the table using a Discord code block
     table = f"```\n{header_row}\n{value_row}\n{checkmark_row}\n```"
 
+    # Emphasized Result Formatting
+    result_line = f"## **__RESULT:__ `{result['Result']}`**"
+
     # Create an embed message
     embed = discord.Embed(
-        title="🎲 ALEA Dice Roll Result",
+        title="🎲 **ALEA Dice Roll Result**",
         description=f"**First Roll:** `{result['First Roll']}`\n"
                     f"**Final Roll (after LD):** `{result['Final Roll']}`\n"
                     f"**Threshold Value (TV):** `{result['Threshold Value (TV)']}`\n"
                     f"**Level of Difficulty (LD):** `{result['Level of Difficulty (LD)']}`\n"
-                    f"**Result:** `{result['Result']}`",
-        color=discord.Color.blue()
+                    "━━━━━━━━━━━━━━━\n"
+                    f"{result_line}\n"
+                    "━━━━━━━━━━━━━━━",
+        color=discord.Color.gold()
     )
 
     # Add the formatted table as a field inside the embed
