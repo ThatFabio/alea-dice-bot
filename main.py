@@ -14,14 +14,60 @@ bot = commands.Bot(command_prefix="!", intents=intents)  # Add a dummy prefix
 async def alea(interaction: discord.Interaction, tv: int, ld: int):
     """Rolls an ALEA dice check"""
     result = alea_roll(tv, ld)
-    response = (f"🎲 **ALEA Roll Result** 🎲\n"
-                f"First Roll: {result['First Roll']}\n"
-                f"Final Roll (after LD): {result['Final Roll']}\n"
-                f"Threshold Value (TV): {result['Threshold Value (TV)']}\n"
-                f"Level of Difficulty (LD): {result['Level of Difficulty (LD)']}\n"
-                f"**Result: {result['Result']}**")
     
+    # Success/Failure Thresholds
+    thresholds = [
+        round(tv * 0.10),  # S4 (≤10%)
+        round(tv * 0.50),  # S3 (≤50%)
+        round(tv * 0.90),  # S2 (≤90%)
+        round(tv * 1.00),  # S1 (≤100%)
+        round(tv * 1.10),  # F1 (≤110%)
+        round(tv * 1.50),  # F2 (≤150%)
+        round(tv * 1.90),  # F3 (≤190%)
+        round(tv * 2.00)   # F4 (>190%)
+    ]
+    
+    # Success/Failure Labels
+    labels = ["S4", "S3", "S2", "S1", "F1", "F2", "F3", "F4"]
+    
+    # Compute the actual ranges for the second row
+    ranges = [
+        f"≤{thresholds[0]}",
+        f"{thresholds[0]+1}-{thresholds[1]}",
+        f"{thresholds[1]+1}-{thresholds[2]}",
+        f"{thresholds[2]+1}-{thresholds[3]}",
+        f"{thresholds[3]+1}-{thresholds[4]}",
+        f"{thresholds[4]+1}-{thresholds[5]}",
+        f"{thresholds[5]+1}-{thresholds[6]}",
+        f">{thresholds[6]}"
+    ]
+    
+    # Determine where the final roll fits
+    checkmarks = [" " for _ in range(8)]
+    for i in range(len(thresholds)):
+        if result["Final Roll"] <= thresholds[i]:
+            checkmarks[i] = "✅"
+            break
+
+    # Format the table visually
+    table = (
+        f"| {' | '.join(labels)} |\n"
+        f"| {' | '.join(ranges)} |\n"
+        f"| {' | '.join(checkmarks)} |"
+    )
+
+    response = (
+        f"🎲 **ALEA Roll Result** 🎲\n"
+        f"First Roll: **{result['First Roll']}**\n"
+        f"Final Roll (after LD): **{result['Final Roll']}**\n"
+        f"Threshold Value (TV): **{result['Threshold Value (TV)']}**\n"
+        f"Level of Difficulty (LD): **{result['Level of Difficulty (LD)']}**\n\n"
+        f"**Result:** {result['Result']}\n\n"
+        f"```markdown\n{table}\n```"
+    )
+
     await interaction.response.send_message(response)
+
 
 @bot.event
 async def on_ready():
