@@ -6,13 +6,12 @@ import os
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Load token from Render's environment variables
 
 intents = discord.Intents.default()
-
 bot = commands.Bot(command_prefix="!", intents=intents)  # Add a dummy prefix
 
 
 @bot.tree.command(name="alea")
 async def alea(interaction: discord.Interaction, tv: int, ld: int):
-    """Rolls an ALEA dice check with a deferred response to avoid timeouts"""
+    """Effettua un tiro ALEA con risposta differita per evitare timeout"""
 
     # Acknowledge the interaction immediately to prevent timeout issues
     await interaction.response.defer()
@@ -20,57 +19,54 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
     # Perform the dice roll calculations
     result = alea_roll(tv, ld)
 
-    # Success/Failure Thresholds (show only the top value of each range)
+    # Success/Failure Thresholds with 2-digit padding (01 to 00)
     thresholds = [
-        round(tv * 0.10),  # S4 (10%)
-        round(tv * 0.50),  # S3 (50%)
-        round(tv * 0.90),  # S2 (90%)
-        round(tv * 1.00),  # S1 (100%)
-        round(tv * 1.10),  # F1 (110%)
-        round(tv * 1.50),  # F2 (150%)
-        round(tv * 1.90),  # F3 (190%)
-        round(tv * 2.00)   # F4 (200%)
+        f"{round(tv * 0.10):02}",  # S4 (10%)
+        f"{round(tv * 0.50):02}",  # S3 (50%)
+        f"{round(tv * 0.90):02}",  # S2 (90%)
+        f"{round(tv * 1.00):02}",  # S1 (100%)
+        f"{round(tv * 1.10):02}",  # F1 (110%)
+        f"{round(tv * 1.50):02}",  # F2 (150%)
+        f"{round(tv * 1.90):02}",  # F3 (190%)
+        f"{round(tv * 2.00):02}"   # F4 (200%)
     ]
 
     # Success/Failure Labels
     labels = ["S4", "S3", "S2", "S1", "F1", "F2", "F3", "F4"]
 
-    # Determine where the final roll fits
+    # Determine where the final roll fits (column 3)
     checkmarks = [" " for _ in range(8)]  # Default to empty spaces
     for i in range(len(thresholds)):
-        if result["Final Roll"] <= thresholds[i]:
+        if result["Tiro Manovra (con LD)"] <= int(thresholds[i]):
             checkmarks[i] = "✅"  # Mark the correct column
             break
 
-    # Define column width (monospaced font)
-    col_width = 6  # Each column will be 6 characters wide
-
-    # Format each row with fixed-width spacing
-    header_row = " ".join(f"{label:^{col_width}}" for label in labels)
-    value_row = " ".join(f"{value:^{col_width}}" for value in thresholds)
-    checkmark_row = " ".join(f"{mark:^{col_width}}" for mark in checkmarks)
-
-    # Format the table using a Discord code block
-    table = f"```\n{header_row}\n{value_row}\n{checkmark_row}\n```"
+    # Transposed Table Format (Aligned Monospace)
+    table = "```\n"
+    table += "   Grado   |  VS  |  TM  \n"
+    table += "-----------|------|------\n"
+    for i in range(8):
+        table += f"  {labels[i]:^8} |  {thresholds[i]:^4} | {checkmarks[i]:^4} \n"
+    table += "```"
 
     # Emphasized Result Formatting
-    result_line = f"# **{result['Result']}**"
+    result_line = f"## 🎯 __RISULTATO:__ `{result['Risultato']}` 🎯"
 
     # Create an embed message
     embed = discord.Embed(
-        title="🎲 **ALEA Dice Roll Result**",
-        description=f"**First Roll:** `{result['First Roll']}`\n"
-                    f"**Final Roll (after LD):** `{result['Final Roll']}`\n"
-                    f"**Threshold Value (TV):** `{result['Threshold Value (TV)']}`\n"
-                    f"**Level of Difficulty (LD):** `{result['Level of Difficulty (LD)']}`\n"
+        title="🎲 **Tiro ALEA**",
+        description=f"**Tiro 1d100:** `{result['Tiro 1d100']}`\n"
+                    f"**Tiro Manovra (con LD):** `{result['Tiro Manovra (con LD)']}`\n"
+                    f"**Valore Soglia (VS):** `{result['Valore Soglia (VS)']}`\n"
+                    f"**Livello Difficoltà (LD):** `{result['Livello Difficoltà (LD)']}`\n"
                     "━━━━━━━━━━━━━━━\n"
                     f"{result_line}\n"
                     "━━━━━━━━━━━━━━━",
         color=discord.Color.gold()
     )
 
-    # Add the formatted table as a field inside the embed
-    embed.add_field(name="Success Levels & Roll Placement", value=table, inline=False)
+    # Add the transposed table inside the embed
+    embed.add_field(name="Gradi di Successo", value=table, inline=False)
 
     # Optional: Add an ALEA-themed thumbnail or Star Trek image
     embed.set_thumbnail(url="https://your-image-url-here.png")  # Change to a relevant image
@@ -79,14 +75,15 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
     await interaction.followup.send(embed=embed)
 
 
-
 @bot.event
 async def on_ready():
-    try:
-        synced = await bot.tree.sync()  # Sync slash commands
-        print(f"Synced {len(synced)} commands")
-    except Exception as e:
-        print(f"Error syncing commands: {e}")
+    if not hasattr(bot, "synced"):
+        try:
+            synced = await bot.tree.sync()  # Sync slash commands
+            print(f"Synced {len(synced)} commands")
+            bot.synced = True  # Prevents multiple sync attempts
+        except Exception as e:
+            print(f"Errore nella sincronizzazione dei comandi: {e}")
 
 
 def alea_roll(tv, ld, lucky_number=None):
@@ -102,45 +99,22 @@ def alea_roll(tv, ld, lucky_number=None):
 
     final_roll += ld
 
-    if lucky_number and first_roll == lucky_number:
-        result = "Critical Success"
-    else:
-        ratio = (final_roll / tv) * 100 if tv > 0 else float('inf')
-        if ratio <= 10:
-            result = "Critical Success"
-        elif ratio <= 50:
-            result = "Full Success"
-        elif ratio <= 90:
-            result = "Partial Success"
-        elif ratio <= 100:
-            result = "Minimal Success"
-        elif ratio <= 110:
-            result = "Minimal Failure"
-        elif ratio <= 150:
-            result = "Partial Failure"
-        elif ratio <= 190:
-            result = "Full Failure"
-        else:
-            result = "Critical Failure"
+    ratio = (final_roll / tv) * 100 if tv > 0 else float('inf')
+    result = ("Successo Assoluto" if ratio <= 10 else
+              "Successo Pieno" if ratio <= 50 else
+              "Successo Parziale" if ratio <= 90 else
+              "Successo Minimo" if ratio <= 100 else
+              "Fallimento Minimo" if ratio <= 110 else
+              "Fallimento Parziale" if ratio <= 150 else
+              "Fallimento Pieno" if ratio <= 190 else
+              "Fallimento Critico")
 
     return {
-        "First Roll": first_roll,
-        "Final Roll": final_roll,
-        "Threshold Value (TV)": tv,
-        "Level of Difficulty (LD)": ld,
-        "Result": result
+        "Tiro 1d100": first_roll,
+        "Tiro Manovra (con LD)": final_roll,
+        "Valore Soglia (VS)": tv,
+        "Livello Difficoltà (LD)": ld,
+        "Risultato": result
     }
-
-@bot.command(name="alea")
-async def alea(ctx, tv: int, ld: int):
-    result = alea_roll(tv, ld)
-    response = (f"🎲 **ALEA Roll Result** 🎲\n"
-                f"First Roll: {result['First Roll']}\n"
-                f"Final Roll (after LD): {result['Final Roll']}\n"
-                f"Threshold Value (TV): {result['Threshold Value (TV)']}\n"
-                f"Level of Difficulty (LD): {result['Level of Difficulty (LD)']}\n"
-                f"**Result: {result['Result']}**")
-    
-    await ctx.send(response)
 
 bot.run(TOKEN)
