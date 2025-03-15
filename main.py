@@ -36,20 +36,22 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
     labels = ["S4", "S3", "S2", "S1", "F1", "F2", "F3", "F4"]
 
     # Determine where the final roll fits
-    checkmarks = ["⬜" for _ in range(8)]  # Default to empty squares
+    checkmarks = [" " for _ in range(8)]  # Default to empty spaces
     for i in range(len(thresholds)):
         if result["Final Roll"] <= thresholds[i]:
             checkmarks[i] = "✅"  # Mark the correct column
             break
 
-    # Format the table using tabs for proper alignment
-    table = (
-        "```\n"
-        f"{labels[0]}\t{labels[1]}\t{labels[2]}\t{labels[3]}\t{labels[4]}\t{labels[5]}\t{labels[6]}\t{labels[7]}\n"
-        f"{thresholds[0]}\t{thresholds[1]}\t{thresholds[2]}\t{thresholds[3]}\t{thresholds[4]}\t{thresholds[5]}\t{thresholds[6]}\t{thresholds[7]}\n"
-        f"{checkmarks[0]}\t{checkmarks[1]}\t{checkmarks[2]}\t{checkmarks[3]}\t{checkmarks[4]}\t{checkmarks[5]}\t{checkmarks[6]}\t{checkmarks[7]}\n"
-        "```"
-    )
+    # Define column width (monospaced font)
+    col_width = 6  # Each column will be 6 characters wide
+
+    # Format each row with fixed-width spacing
+    header_row = " ".join(f"{label:^{col_width}}" for label in labels)
+    value_row = " ".join(f"{value:^{col_width}}" for value in thresholds)
+    checkmark_row = " ".join(f"{mark:^{col_width}}" for mark in checkmarks)
+
+    # Format the table using a Discord code block
+    table = f"```\n{header_row}\n{value_row}\n{checkmark_row}\n```"
 
     # Create an embed message
     embed = discord.Embed(
@@ -70,6 +72,7 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
 
     # Send the final response (after deferring)
     await interaction.followup.send(embed=embed)
+
 
 
 @bot.event
