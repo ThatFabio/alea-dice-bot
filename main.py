@@ -7,7 +7,8 @@ TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Load token from Render's environment v
 
 intents = discord.Intents.default()
 
-bot = commands.Bot(intents=intents)  # Remove the old prefix
+bot = commands.Bot(command_prefix="!", intents=intents)  # Add a dummy prefix
+
 
 @bot.tree.command(name="alea")
 async def alea(interaction: discord.Interaction, tv: int, ld: int):
