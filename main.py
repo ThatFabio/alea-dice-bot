@@ -12,7 +12,12 @@ bot = commands.Bot(command_prefix="!", intents=intents)  # Add a dummy prefix
 
 @bot.tree.command(name="alea")
 async def alea(interaction: discord.Interaction, tv: int, ld: int):
-    """Rolls an ALEA dice check"""
+    """Rolls an ALEA dice check with a deferred response to avoid timeouts"""
+    
+    # Acknowledge the interaction immediately to prevent timeout issues
+    await interaction.response.defer()
+    
+    # Perform the dice roll calculations
     result = alea_roll(tv, ld)
     
     # Success/Failure Thresholds
@@ -68,7 +73,8 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
     # Optional: Add an ALEA-themed thumbnail or Star Trek image
     embed.set_thumbnail(url="https://your-image-url-here.png")  # Change to a relevant image
 
-    await interaction.response.send_message(embed=embed)
+    # Send the final response (after deferring)
+    await interaction.followup.send(embed=embed)
 
 
 @bot.event
