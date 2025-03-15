@@ -53,15 +53,15 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
     table += "```"
 
     # Emphasized Result Formatting
-    result_line = f"## 🎯 __RISULTATO:__ `{result['Risultato']}` 🎯"
+    result_line = f"# {result['Risultato']}"
 
     # Create an embed message
     embed = discord.Embed(
-        title="🎲 **Tiro ALEA**",
-        description=f"**Tiro 1d100:** `{result['Tiro 1d100']}`\n"
-                    f"**Tiro Manovra (con LD):** `{result['Tiro Manovra (con LD)']}`\n"
-                    f"**Valore Soglia (VS):** `{result['Valore Soglia (VS)']}`\n"
-                    f"**Livello Difficoltà (LD):** `{result['Livello Difficoltà (LD)']}`\n"
+        title=" **## Tiro Manovra**",
+        description=f"# {result['Tiro 1d100']}\n"
+                    f"Tiro Manovra (con LD): **{result['Tiro Manovra (con LD)']}**\n"
+                    f"Valore Soglia (VS): **{result['Valore Soglia (VS)']}**\n"
+                    f"Livello Difficoltà (LD): **{result['Livello Difficoltà (LD)']}**\n"
                     "━━━━━━━━━━━━━━━\n"
                     f"{result_line}\n"
                     "━━━━━━━━━━━━━━━",
