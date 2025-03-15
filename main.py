@@ -46,10 +46,10 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
 
     # Format the table using monospaced alignment
     table = "```\n"
-    table += "Grd |   VS   | Ris \n"
-    table += "--- | ------ | ----\n"
+    table += "Grd ║   VS   ║ Ris \n"
+    table += "────╫────────╫─────\n"
     for i in range(8):
-        table += f"{labels[i]:<3} | {ranges[i]:<6} | {checkmarks[i]:<4} \n"
+        table += f"{labels[i]:<3} ║ {ranges[i]:<6} ║ {checkmarks[i]:<4} \n"
     table += "```"
 
     # Emphasized Result Formatting
