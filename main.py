@@ -42,7 +42,7 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
             break
 
     # Define fixed-width columns for perfect spacing
-    col_width = 8  # Each column will be 8 characters wide
+    col_width = 6  # Each column will be 8 characters wide
 
     # Format each row using fixed-width alignment
     header_row = "".join(f"{label:^{col_width}}" for label in labels)
@@ -53,7 +53,7 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
     table = f"```\n{header_row}\n{value_row}\n{checkmark_row}\n```"
 
     # Emphasized Result Formatting
-    result_line = f"## 🎯 __RISULTATO:__ `{result['Risultato']}` 🎯"
+    result_line = f"## {result['Risultato']}"
 
     # Create an embed message
     embed = discord.Embed(
