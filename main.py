@@ -13,37 +13,28 @@ bot = commands.Bot(command_prefix="!", intents=intents)  # Add a dummy prefix
 @bot.tree.command(name="alea")
 async def alea(interaction: discord.Interaction, tv: int, ld: int):
     """Rolls an ALEA dice check with a deferred response to avoid timeouts"""
-    
+
     # Acknowledge the interaction immediately to prevent timeout issues
     await interaction.response.defer()
-    
+
     # Perform the dice roll calculations
     result = alea_roll(tv, ld)
-    
-    # Success/Failure Thresholds
+
+    # Success/Failure Thresholds (show only the top value of each range)
     thresholds = [
-        round(tv * 0.10),  # S4 (≤10%)
-        round(tv * 0.50),  # S3 (≤50%)
-        round(tv * 0.90),  # S2 (≤90%)
-        round(tv * 1.00),  # S1 (≤100%)
-        round(tv * 1.10),  # F1 (≤110%)
-        round(tv * 1.50),  # F2 (≤150%)
-        round(tv * 1.90),  # F3 (≤190%)
-        round(tv * 2.00)   # F4 (>190%)
+        round(tv * 0.10),  # S4 (10%)
+        round(tv * 0.50),  # S3 (50%)
+        round(tv * 0.90),  # S2 (90%)
+        round(tv * 1.00),  # S1 (100%)
+        round(tv * 1.10),  # F1 (110%)
+        round(tv * 1.50),  # F2 (150%)
+        round(tv * 1.90),  # F3 (190%)
+        round(tv * 2.00)   # F4 (200%)
     ]
-    
-    # Compute the actual ranges for the second row
-    ranges = [
-        f"≤{thresholds[0]}",
-        f"{thresholds[0]+1}-{thresholds[1]}",
-        f"{thresholds[1]+1}-{thresholds[2]}",
-        f"{thresholds[2]+1}-{thresholds[3]}",
-        f"{thresholds[3]+1}-{thresholds[4]}",
-        f"{thresholds[4]+1}-{thresholds[5]}",
-        f"{thresholds[5]+1}-{thresholds[6]}",
-        f">{thresholds[6]}"
-    ]
-    
+
+    # Success/Failure Labels
+    labels = ["S4", "S3", "S2", "S1", "F1", "F2", "F3", "F4"]
+
     # Determine where the final roll fits
     checkmarks = ["⬜" for _ in range(8)]  # Default to empty squares
     for i in range(len(thresholds)):
@@ -54,7 +45,8 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
     # Format the table using tabs for proper alignment
     table = (
         "```\n"
-        f"{ranges[0]}\t{ranges[1]}\t{ranges[2]}\t{ranges[3]}\t{ranges[4]}\t{ranges[5]}\t{ranges[6]}\t{ranges[7]}\n"
+        f"{labels[0]}\t{labels[1]}\t{labels[2]}\t{labels[3]}\t{labels[4]}\t{labels[5]}\t{labels[6]}\t{labels[7]}\n"
+        f"{thresholds[0]}\t{thresholds[1]}\t{thresholds[2]}\t{thresholds[3]}\t{thresholds[4]}\t{thresholds[5]}\t{thresholds[6]}\t{thresholds[7]}\n"
         f"{checkmarks[0]}\t{checkmarks[1]}\t{checkmarks[2]}\t{checkmarks[3]}\t{checkmarks[4]}\t{checkmarks[5]}\t{checkmarks[6]}\t{checkmarks[7]}\n"
         "```"
     )
@@ -71,7 +63,7 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
     )
 
     # Add the formatted table as a field inside the embed
-    embed.add_field(name="Thresholds & Roll Placement", value=table, inline=False)
+    embed.add_field(name="Success Levels & Roll Placement", value=table, inline=False)
 
     # Optional: Add an ALEA-themed thumbnail or Star Trek image
     embed.set_thumbnail(url="https://your-image-url-here.png")  # Change to a relevant image
