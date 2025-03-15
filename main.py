@@ -6,7 +6,30 @@ import os
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Load token from Render's environment variables
 
 intents = discord.Intents.default()
-bot = commands.Bot(command_prefix="/", intents=intents)
+
+bot = commands.Bot(intents=intents)  # Remove the old prefix
+
+@bot.tree.command(name="alea")
+async def alea(interaction: discord.Interaction, tv: int, ld: int):
+    """Rolls an ALEA dice check"""
+    result = alea_roll(tv, ld)
+    response = (f"🎲 **ALEA Roll Result** 🎲\n"
+                f"First Roll: {result['First Roll']}\n"
+                f"Final Roll (after LD): {result['Final Roll']}\n"
+                f"Threshold Value (TV): {result['Threshold Value (TV)']}\n"
+                f"Level of Difficulty (LD): {result['Level of Difficulty (LD)']}\n"
+                f"**Result: {result['Result']}**")
+    
+    await interaction.response.send_message(response)
+
+@bot.event
+async def on_ready():
+    try:
+        synced = await bot.tree.sync()  # Sync slash commands
+        print(f"Synced {len(synced)} commands")
+    except Exception as e:
+        print(f"Error syncing commands: {e}")
+
 
 def alea_roll(tv, ld, lucky_number=None):
     first_roll = random.randint(1, 100)
