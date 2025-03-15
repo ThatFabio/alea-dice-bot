@@ -32,9 +32,6 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
         round(tv * 2.00)   # F4 (>190%)
     ]
     
-    # Success/Failure Labels
-    labels = ["S4", "S3", "S2", "S1", "F1", "F2", "F3", "F4"]
-    
     # Compute the actual ranges for the second row
     ranges = [
         f"≤{thresholds[0]}",
@@ -54,6 +51,14 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
             checkmarks[i] = "✅"  # Mark the correct column
             break
 
+    # Format the table using tabs for proper alignment
+    table = (
+        "```\n"
+        f"{ranges[0]}\t{ranges[1]}\t{ranges[2]}\t{ranges[3]}\t{ranges[4]}\t{ranges[5]}\t{ranges[6]}\t{ranges[7]}\n"
+        f"{checkmarks[0]}\t{checkmarks[1]}\t{checkmarks[2]}\t{checkmarks[3]}\t{checkmarks[4]}\t{checkmarks[5]}\t{checkmarks[6]}\t{checkmarks[7]}\n"
+        "```"
+    )
+
     # Create an embed message
     embed = discord.Embed(
         title="🎲 ALEA Dice Roll Result",
@@ -65,10 +70,8 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
         color=discord.Color.blue()
     )
 
-    # Add the formatted table as embed fields
-    embed.add_field(name="**Success/Failure Levels**", value=" | ".join(labels), inline=False)
-    embed.add_field(name="**Threshold Ranges**", value=" | ".join(ranges), inline=False)
-    embed.add_field(name="**Roll Placement**", value=" | ".join(checkmarks), inline=False)
+    # Add the formatted table as a field inside the embed
+    embed.add_field(name="Thresholds & Roll Placement", value=table, inline=False)
 
     # Optional: Add an ALEA-themed thumbnail or Star Trek image
     embed.set_thumbnail(url="https://your-image-url-here.png")  # Change to a relevant image
