@@ -43,30 +43,32 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
     ]
     
     # Determine where the final roll fits
-    checkmarks = [" " for _ in range(8)]
+    checkmarks = ["⬜" for _ in range(8)]  # Default to empty squares
     for i in range(len(thresholds)):
         if result["Final Roll"] <= thresholds[i]:
-            checkmarks[i] = "✅"
+            checkmarks[i] = "✅"  # Mark the correct column
             break
 
-    # Format the table visually
-    table = (
-        f"| {' | '.join(labels)} |\n"
-        f"| {' | '.join(ranges)} |\n"
-        f"| {' | '.join(checkmarks)} |"
+    # Create an embed message
+    embed = discord.Embed(
+        title="🎲 ALEA Dice Roll Result",
+        description=f"**First Roll:** `{result['First Roll']}`\n"
+                    f"**Final Roll (after LD):** `{result['Final Roll']}`\n"
+                    f"**Threshold Value (TV):** `{result['Threshold Value (TV)']}`\n"
+                    f"**Level of Difficulty (LD):** `{result['Level of Difficulty (LD)']}`\n"
+                    f"**Result:** `{result['Result']}`",
+        color=discord.Color.blue()
     )
 
-    response = (
-        f"🎲 **ALEA Roll Result** 🎲\n"
-        f"First Roll: **{result['First Roll']}**\n"
-        f"Final Roll (after LD): **{result['Final Roll']}**\n"
-        f"Threshold Value (TV): **{result['Threshold Value (TV)']}**\n"
-        f"Level of Difficulty (LD): **{result['Level of Difficulty (LD)']}**\n\n"
-        f"**Result:** {result['Result']}\n\n"
-        f"```markdown\n{table}\n```"
-    )
+    # Add the formatted table as embed fields
+    embed.add_field(name="**Success/Failure Levels**", value=" | ".join(labels), inline=False)
+    embed.add_field(name="**Threshold Ranges**", value=" | ".join(ranges), inline=False)
+    embed.add_field(name="**Roll Placement**", value=" | ".join(checkmarks), inline=False)
 
-    await interaction.response.send_message(response)
+    # Optional: Add an ALEA-themed thumbnail or Star Trek image
+    embed.set_thumbnail(url="https://your-image-url-here.png")  # Change to a relevant image
+
+    await interaction.response.send_message(embed=embed)
 
 
 @bot.event
