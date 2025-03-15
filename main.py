@@ -41,13 +41,16 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
             checkmarks[i] = "✅"  # Mark the correct column
             break
 
-    # Transposed Table Format (Aligned Monospace)
-    table = "```\n"
-    table += "   Grado   |  VS  |  TM  \n"
-    table += "-----------|------|------\n"
-    for i in range(8):
-        table += f"  {labels[i]:^8} |  {thresholds[i]:^4} | {checkmarks[i]:^4} \n"
-    table += "```"
+    # Define fixed-width columns for perfect spacing
+    col_width = 8  # Each column will be 8 characters wide
+
+    # Format each row using fixed-width alignment
+    header_row = "".join(f"{label:^{col_width}}" for label in labels)
+    value_row = "".join(f"{value:^{col_width}}" for value in thresholds)
+    checkmark_row = "".join(f"{mark:^{col_width}}" for mark in checkmarks)
+
+    # Format the table using a Discord code block (monospace)
+    table = f"```\n{header_row}\n{value_row}\n{checkmark_row}\n```"
 
     # Emphasized Result Formatting
     result_line = f"## 🎯 __RISULTATO:__ `{result['Risultato']}` 🎯"
@@ -116,5 +119,6 @@ def alea_roll(tv, ld, lucky_number=None):
         "Livello Difficoltà (LD)": ld,
         "Risultato": result
     }
+
 
 bot.run(TOKEN)
