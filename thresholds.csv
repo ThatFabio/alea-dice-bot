@@ -4,5 +4,5 @@
 100,Successo Minimo,SM
 110,Fallimento Minimo,FM
 150,Fallimento Parziale,Fp
-190,Fallimento Pieno,FP
+200,Fallimento Pieno,FP
 999,Fallimento Critico,FC
