@@ -26,7 +26,6 @@ def load_thresholds():
 THRESHOLDS, SUCCESS_LABELS = load_thresholds()  # Load at startup
 
 
-
 @bot.tree.command(name="alea")
 async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: bool = False):
     """Effettua un tiro ALEA con risposta differita per evitare timeout"""
@@ -43,20 +42,20 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
     # Identify where the result falls
     position = next((i for i, bound in enumerate(boundaries) if result["Tiro Manovra (con LD)"] <= bound), len(boundaries))
 
-    # Get the three closest degrees of success
-    min_index = max(position - 1, 0)
-    max_index = min(position + 1, len(boundaries) - 1)
+    # Handle Edge Cases: If in S4 or F4, adjust neighbors
+    if position == 0:  # If result is in S4
+        selected_indices = [0, 1, 2]  # Show S4, S3, S2
+    elif position >= len(boundaries) - 1:  # If result is in F4
+        selected_indices = [len(boundaries) - 3, len(boundaries) - 2, len(boundaries) - 1]  # Show F2, F3, F4
+    else:  # Default case (centered view)
+        selected_indices = [position - 1, position, position + 1]
 
-    selected_labels = [
-        SUCCESS_LABELS[min_index],  # Left
-        SUCCESS_LABELS[position],   # Middle (bold)
-        SUCCESS_LABELS[max_index]   # Right
-    ]
+    selected_labels = [SUCCESS_LABELS[i] for i in selected_indices]
 
     selected_ranges = [
-        f"{boundaries[min_index-1]+1}-{boundaries[min_index]}",  
-        f"{boundaries[position-1]+1}-{boundaries[position]}",  
-        f"{boundaries[max_index-1]+1}-{boundaries[max_index]}"  
+        f"{boundaries[selected_indices[0]-1]+1}-{boundaries[selected_indices[0]]}",  
+        f"\033[1m{boundaries[selected_indices[1]-1]+1}-{boundaries[selected_indices[1]]}\033[0m",  # Bold middle column
+        f"{boundaries[selected_indices[2]-1]+1}-{boundaries[selected_indices[2]]}"
     ]
 
     # Handle "Tiro Aperto" (Exploding Rolls)
@@ -68,7 +67,7 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
     table = "```\n"
     table += f" {selected_labels[0]:<6} | {selected_labels[1]:<6} | {selected_labels[2]:<6} \n"
     table += "------|------|------\n"
-    table += f" {selected_ranges[0]:<6} | \033[1m{selected_ranges[1]:<6}\033[0m | {selected_ranges[2]:<6} \n"  # Bold middle column
+    table += f" {selected_ranges[0]:<6} | {selected_ranges[1]:<6} | {selected_ranges[2]:<6} \n"
     table += "```"
 
     # Emphasized Result Formatting
