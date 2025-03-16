@@ -69,15 +69,15 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
     table = "```\n"
     table += f"{selected_acronyms[0]:^7} | {selected_acronyms[1]:^7} | {selected_acronyms[2]:^7}\n"
     table += f"{'-'*7}|{'-'*7}|{'-'*7}\n"
-    table += f"{selected_ranges[0]:^7} | \033[1m{selected_ranges[1]:^7}\033[0m | {selected_ranges[2]:^7}\n"
+    table += f"{selected_ranges[0]:^7} | {selected_ranges[1]:^7} | {selected_ranges[2]:^7}\n"
     table += "```"
 
     # Emphasized Result Formatting
     result_line = f"## {result['Risultato']}"
 
     # Create an embed message
-    embed = discord.Embed(
-        title=f"# {result['Tiro 1d100']}",
+   embed = discord.Embed(
+    title=f"**Tiro 1d100: {result['Tiro 1d100']}**",
         description=(
             f"**Tiro Manovra (con LD):** `{result['Tiro Manovra (con LD)']}`\n"
             f"**Valore Soglia (VS):** `{result['Valore Soglia (VS)']}`\n"
