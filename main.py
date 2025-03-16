@@ -1,15 +1,26 @@
+import os
+import threading
+import random
 import discord
 from discord.ext import commands
-import random
-import os
 import csv
+from flask import Flask
 
+# === Flask Keep-Alive Server ===
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run_server():
+    port = int(os.environ.get('PORT', 8080))  # Render requires a PORT
+    app.run(host='0.0.0.0', port=port)
+
+# === Load Environment Variables ===
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Load token from Render's environment variables
 
-intents = discord.Intents.default()
-bot = commands.Bot(command_prefix="!", intents=intents)  # Add a dummy prefix
-
-# Load degrees of success from CSV
+# === Load Degrees of Success from CSV ===
 def load_thresholds():
     thresholds = []
     success_labels = []
@@ -27,6 +38,9 @@ def load_thresholds():
 
 THRESHOLDS, SUCCESS_LABELS, SUCCESS_ACRONYMS = load_thresholds()  # Load at startup
 
+# === Initialize Discord Bot ===
+intents = discord.Intents.default()
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.tree.command(name="alea")
 async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: bool = False):
@@ -88,7 +102,6 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
     # Send the final response (after deferring)
     await interaction.followup.send(embed=embed)
 
-
 @bot.event
 async def on_ready():
     if not hasattr(bot, "synced"):
@@ -98,7 +111,6 @@ async def on_ready():
             bot.synced = True  # Prevents multiple sync attempts
         except Exception as e:
             print(f"Errore nella sincronizzazione dei comandi: {e}")
-
 
 def alea_roll(tv, ld, lucky_number=None):
     first_roll = random.randint(1, 100)
@@ -132,5 +144,9 @@ def alea_roll(tv, ld, lucky_number=None):
         "Risultato": result
     }
 
+# === Run Flask Keep-Alive Server in a Separate Thread ===
+server_thread = threading.Thread(target=run_server)
+server_thread.start()
 
+# === Start Discord Bot ===
 bot.run(TOKEN)
