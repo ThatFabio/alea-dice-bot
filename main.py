@@ -2,15 +2,33 @@ import discord
 from discord.ext import commands
 import random
 import os
+import csv
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")  # Load token from Render's environment variables
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)  # Add a dummy prefix
 
+# Load degrees of success from CSV
+def load_thresholds():
+    thresholds = []
+    success_labels = []
+    
+    with open("thresholds.csv", newline='', encoding='utf-8') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            if row[0].isdigit():  # Only append valid numeric thresholds
+                thresholds.append(float(row[0]) / 100)  # Convert % to decimal
+            success_labels.append(row[1])  # Store success labels
+    
+    return thresholds, success_labels
+
+THRESHOLDS, SUCCESS_LABELS = load_thresholds()  # Load at startup
+
+
 
 @bot.tree.command(name="alea")
-async def alea(interaction: discord.Interaction, tv: int, ld: int):
+async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: bool = False):
     """Effettua un tiro ALEA con risposta differita per evitare timeout"""
 
     # Acknowledge the interaction immediately to prevent timeout issues
@@ -19,60 +37,73 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int):
     # Perform the dice roll calculations
     result = alea_roll(tv, ld)
 
-    # Success/Failure Thresholds with 2-digit padding (01 to 00)
-    thresholds = [
-        round(tv * 0.10),  # S4 (10%)
-        round(tv * 0.50),  # S3 (50%)
-        round(tv * 0.90),  # S2 (90%)
-        round(tv * 1.00),  # S1 (100%)
-        round(tv * 1.10),  # F1 (110%)
-        round(tv * 1.50),  # F2 (150%)
-        round(tv * 1.90),  # F3 (190%)
-        round(tv * 2.00)   # F4 (200%)
+    # Compute Success Boundaries (Highest number of each category)
+    boundaries = [round(tv * threshold) for threshold in THRESHOLDS]
+
+    # Identify where the result falls
+    position = next((i for i, bound in enumerate(boundaries) if result["Tiro Manovra (con LD)"] <= bound), len(boundaries))
+
+    # Get the three closest degrees of success
+    min_index = max(position - 1, 0)
+    max_index = min(position + 1, len(boundaries) - 1)
+
+    selected_labels = [
+        SUCCESS_LABELS[min_index],  # Left
+        SUCCESS_LABELS[position],   # Middle (bold)
+        SUCCESS_LABELS[max_index]   # Right
     ]
 
-    # Success/Failure Labels
-    labels = ["S4", "S3", "S2", "S1", "F1", "F2", "F3", "F4"]
+    selected_ranges = [
+        f"{boundaries[min_index-1]+1}-{boundaries[min_index]}",  
+        f"{boundaries[position-1]+1}-{boundaries[position]}",  
+        f"{boundaries[max_index-1]+1}-{boundaries[max_index]}"  
+    ]
 
-    # Create properly formatted ranges (`xx-yy`)
-    ranges = [f"{thresholds[i]:02}-{thresholds[i+1]:02}" if i < 7 else f"{thresholds[i]:02}-00" for i in range(8)]
+    # Handle "Tiro Aperto" (Exploding Rolls)
+    tiro_aperto_text = ""
+    if result["Tiro Aperto"]:
+        tiro_aperto_text = f"\n🌀 **Tiro Aperto!** Il primo tiro (`{result['Primo Tiro']}`) ha attivato un reroll → `{result['Reroll']}`."
 
-    # Determine where the final roll fits (Column 3)
-    checkmarks = [" " for _ in range(8)]  # Default empty
-    for i in range(len(thresholds)):
-        if result["Tiro Manovra (con LD)"] <= thresholds[i]:
-            checkmarks[i] = "✅"
-            break
-
-    # Format the table using monospaced alignment
+    # Format table in a Discord embed for better readability
     table = "```\n"
-    table += "Grd ║   VS   ║ Ris \n"
-    table += "────╫────────╫─────\n"
-    for i in range(8):
-        table += f"{labels[i]:<3} ║ {ranges[i]:<6} ║ {checkmarks[i]:<4} \n"
+    table += f" {selected_labels[0]:<6} | {selected_labels[1]:<6} | {selected_labels[2]:<6} \n"
+    table += "------|------|------\n"
+    table += f" {selected_ranges[0]:<6} | \033[1m{selected_ranges[1]:<6}\033[0m | {selected_ranges[2]:<6} \n"  # Bold middle column
     table += "```"
 
     # Emphasized Result Formatting
-    result_line = f"# {result['Risultato']}"
+    result_line = f"## 🎯 __RISULTATO:__ `{result['Risultato']}` 🎯"
 
     # Create an embed message
     embed = discord.Embed(
-        title=" **## Tiro Manovra**",
-        description=f"# {result['Tiro 1d100']}\n"
-                    f"Tiro Manovra (con LD): **{result['Tiro Manovra (con LD)']}**\n"
-                    f"Valore Soglia (VS): **{result['Valore Soglia (VS)']}**\n"
-                    f"Livello Difficoltà (LD): **{result['Livello Difficoltà (LD)']}**\n"
-                    "━━━━━━━━━━━━━━━\n"
-                    f"{result_line}\n"
-                    "━━━━━━━━━━━━━━━",
+        title="🎲 **Tiro ALEA**",
+        description=(
+            f"🕹️ **Tiro 1d100:** `{result['Tiro 1d100']}`\n"
+            f"📊 **Tiro Manovra (con LD):** `{result['Tiro Manovra (con LD)']}`\n"
+            f"📏 **Valore Soglia (VS):** `{result['Valore Soglia (VS)']}`\n"
+            f"🎯 **Livello Difficoltà (LD):** `{result['Livello Difficoltà (LD)']}`\n"
+            "━━━━━━━━━━━━━━━\n"
+            f"{result_line}\n"
+            "━━━━━━━━━━━━━━━"
+            f"{tiro_aperto_text}"
+        ),
         color=discord.Color.gold()
     )
 
     # Add the formatted table inside the embed
-    embed.add_field(name="Gradi di Successo", value=table, inline=False)
+    embed.add_field(name="Soglie di Successo", value=table, inline=False)
 
     # Optional: Add an ALEA-themed thumbnail or Star Trek image
     embed.set_thumbnail(url="https://your-image-url-here.png")  # Change to a relevant image
+
+    # Show verbose calculation if requested
+    if verbose:
+        calc_text = f"🔍 **Calcoli Dettagliati**:\n" \
+                    f"- **Tiro 1d100:** `{result['Tiro 1d100']}`\n" \
+                    f"- **Modificatore LD:** `{ld}`\n" \
+                    f"- **Tiro Manovra:** `{result['Tiro Manovra (con LD)']}`\n" \
+                    f"- **Confini di Successo:** `{', '.join(map(str, boundaries))}`"
+        embed.add_field(name="📜 Modalità Verbose", value=calc_text, inline=False)
 
     # Send the final response (after deferring)
     await interaction.followup.send(embed=embed)
@@ -92,27 +123,28 @@ async def on_ready():
 def alea_roll(tv, ld, lucky_number=None):
     first_roll = random.randint(1, 100)
     final_roll = first_roll
+    tiro_aperto = False
+    reroll_value = None
 
+    # Handle "Tiro Aperto" logic
     if first_roll in range(1, 6):  
-        reroll = random.randint(1, 100)
-        final_roll -= reroll
+        reroll_value = random.randint(1, 100)
+        final_roll -= reroll_value
+        tiro_aperto = True
     elif first_roll in range(96, 101):  
-        reroll = random.randint(1, 100)
-        final_roll += reroll
+        reroll_value = random.randint(1, 100)
+        final_roll += reroll_value
+        tiro_aperto = True
 
     final_roll += ld
 
     ratio = (final_roll / tv) * 100 if tv > 0 else float('inf')
-    result = ("Successo Assoluto" if ratio <= 10 else
-              "Successo Pieno" if ratio <= 50 else
-              "Successo Parziale" if ratio <= 90 else
-              "Successo Minimo" if ratio <= 100 else
-              "Fallimento Minimo" if ratio <= 110 else
-              "Fallimento Parziale" if ratio <= 150 else
-              "Fallimento Pieno" if ratio <= 190 else
-              "Fallimento Critico")
+    result = SUCCESS_LABELS[next((i for i, bound in enumerate(THRESHOLDS) if final_roll <= bound), len(SUCCESS_LABELS) - 1)]
 
     return {
+        "Primo Tiro": first_roll,
+        "Reroll": reroll_value,
+        "Tiro Aperto": tiro_aperto,
         "Tiro 1d100": first_roll,
         "Tiro Manovra (con LD)": final_roll,
         "Valore Soglia (VS)": tv,
