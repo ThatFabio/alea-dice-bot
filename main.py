@@ -44,55 +44,46 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
     # Identify where the result falls
     position = next((i for i, bound in enumerate(boundaries) if result["Tiro Manovra (con LD)"] <= bound), len(boundaries))
 
-    # Handle Edge Cases: If in S4 or F4, adjust neighbors
-    if position == 0:  # If result is in S4
-        selected_indices = [0, 1, 2]  # Show S4, S3, S2
-    elif position >= len(boundaries) - 1:  # If result is in F4
-        selected_indices = [len(boundaries) - 3, len(boundaries) - 2, len(boundaries) - 1]  # Show F2, F3, F4
-    else:  # Default case (centered view)
-        selected_indices = [position - 1, position, position + 1]
+    # Ensure proper range formatting
+    def format_range(low, high):
+        return f"[{low} - {high}]"  # No leading zeros
 
-    selected_acronyms = [SUCCESS_ACRONYMS[i] for i in selected_indices]
-
-    selected_ranges = [
-        f"{boundaries[selected_indices[0]-1]+1}-{boundaries[selected_indices[0]]}",  
-        f"{boundaries[selected_indices[1]-1]+1}-{boundaries[selected_indices[1]]}",  
-        f"{boundaries[selected_indices[2]-1]+1}-{boundaries[selected_indices[2]]}"
-    ]
+    # Get the range of the achieved success level
+    low = boundaries[position-1] + 1 if position > 0 else 1
+    high = boundaries[position]
+    range_text = format_range(low, high)
 
     # Handle "Tiro Aperto" (Exploding Rolls)
     tiro_aperto_text = ""
     if result["Tiro Aperto"]:
         tiro_aperto_text = f"\n**Tiro Aperto!** Il primo tiro (`{result['Primo Tiro']}`) ha attivato un reroll → `{result['Reroll']}`."
 
-    # Format the table using monospaced text (fixed-width alignment, max 7 chars per column)
-    table = "```\n"
-    table += f"{selected_acronyms[0]:^7} | {selected_acronyms[1]:^7} | {selected_acronyms[2]:^7}\n"
-    table += f"{'-'*7}|{'-'*7}|{'-'*7}\n"
-    table += f"{selected_ranges[0]:^7} | {selected_ranges[1]:^7} | {selected_ranges[2]:^7}\n"
-    table += "```"
-
-    # Emphasized Result Formatting
-    result_line = f"## {result['Risultato']}"
+    # Format output based on verbosity
+    if not verbose:
+        summary = f"## {SUCCESS_LABELS[position]} {range_text} ✅"
+    else:
+        summary = ""
+        for i in range(len(boundaries)):
+            low = boundaries[i-1] + 1 if i > 0 else 1
+            high = boundaries[i]
+            range_text = format_range(low, high)
+            checkmark = " ✅" if i == position else ""
+            summary += f"**{SUCCESS_LABELS[i]}** {range_text}{checkmark}\n"
 
     # Create an embed message
     embed = discord.Embed(
-        title=f"**Tiro 1d100: {result['Tiro 1d100']}**",  # ✅ Properly formatted
+        title=f"**Tiro 1d100: {result['Tiro 1d100']}**",
         description=(
             f"**Tiro Manovra (con LD):** `{result['Tiro Manovra (con LD)']}`\n"
             f"**Valore Soglia (VS):** `{result['Valore Soglia (VS)']}`\n"
             f"**Livello Difficoltà (LD):** `{result['Livello Difficoltà (LD)']}`\n"
             "━━━━━━━━━━━━━━━\n"
-            f"{result_line}\n"
+            f"{summary}\n"
             "━━━━━━━━━━━━━━━"
             f"{tiro_aperto_text}"
         ),
         color=discord.Color.blue()
     )
-
-
-    # Add the formatted table inside the embed
-    embed.add_field(name="Soglie di Successo", value=table, inline=False)
 
     # Send the final response (after deferring)
     await interaction.followup.send(embed=embed)
