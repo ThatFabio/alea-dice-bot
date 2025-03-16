@@ -54,55 +54,42 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
 
     selected_ranges = [
         f"{boundaries[selected_indices[0]-1]+1}-{boundaries[selected_indices[0]]}",  
-        f"\033[1m{boundaries[selected_indices[1]-1]+1}-{boundaries[selected_indices[1]]}\033[0m",  # Bold middle column
+        f"{boundaries[selected_indices[1]-1]+1}-{boundaries[selected_indices[1]]}",  
         f"{boundaries[selected_indices[2]-1]+1}-{boundaries[selected_indices[2]]}"
     ]
 
     # Handle "Tiro Aperto" (Exploding Rolls)
     tiro_aperto_text = ""
     if result["Tiro Aperto"]:
-        tiro_aperto_text = f"\n🌀 **Tiro Aperto!** Il primo tiro (`{result['Primo Tiro']}`) ha attivato un reroll → `{result['Reroll']}`."
+        tiro_aperto_text = f"\n**Tiro Aperto!** Il primo tiro (`{result['Primo Tiro']}`) ha attivato un reroll → `{result['Reroll']}`."
 
-    # Format table in a Discord embed for better readability
+    # Format the table using monospaced text (fixed-width alignment)
     table = "```\n"
-    table += f" {selected_labels[0]:<6} | {selected_labels[1]:<6} | {selected_labels[2]:<6} \n"
-    table += "------|------|------\n"
-    table += f" {selected_ranges[0]:<6} | {selected_ranges[1]:<6} | {selected_ranges[2]:<6} \n"
+    table += f"{selected_labels[0]:^20} | {selected_labels[1]:^20} | {selected_labels[2]:^20}\n"
+    table += f"{'-'*20}|{'-'*20}|{'-'*20}\n"
+    table += f"{selected_ranges[0]:^20} | {selected_ranges[1]:^20} | {selected_ranges[2]:^20}\n"
     table += "```"
 
     # Emphasized Result Formatting
-    result_line = f"## 🎯 __RISULTATO:__ `{result['Risultato']}` 🎯"
+    result_line = f"## {result['Risultato']}"
 
     # Create an embed message
     embed = discord.Embed(
-        title="🎲 **Tiro ALEA**",
+        title=f"# {result['Tiro 1d100']}",
         description=(
-            f"🕹️ **Tiro 1d100:** `{result['Tiro 1d100']}`\n"
-            f"📊 **Tiro Manovra (con LD):** `{result['Tiro Manovra (con LD)']}`\n"
-            f"📏 **Valore Soglia (VS):** `{result['Valore Soglia (VS)']}`\n"
-            f"🎯 **Livello Difficoltà (LD):** `{result['Livello Difficoltà (LD)']}`\n"
+            f"**Tiro Manovra (con LD):** `{result['Tiro Manovra (con LD)']}`\n"
+            f"**Valore Soglia (VS):** `{result['Valore Soglia (VS)']}`\n"
+            f"**Livello Difficoltà (LD):** `{result['Livello Difficoltà (LD)']}`\n"
             "━━━━━━━━━━━━━━━\n"
             f"{result_line}\n"
             "━━━━━━━━━━━━━━━"
             f"{tiro_aperto_text}"
         ),
-        color=discord.Color.gold()
+        color=discord.Color.blue()
     )
 
     # Add the formatted table inside the embed
     embed.add_field(name="Soglie di Successo", value=table, inline=False)
-
-    # Optional: Add an ALEA-themed thumbnail or Star Trek image
-    embed.set_thumbnail(url="https://your-image-url-here.png")  # Change to a relevant image
-
-    # Show verbose calculation if requested
-    if verbose:
-        calc_text = f"🔍 **Calcoli Dettagliati**:\n" \
-                    f"- **Tiro 1d100:** `{result['Tiro 1d100']}`\n" \
-                    f"- **Modificatore LD:** `{ld}`\n" \
-                    f"- **Tiro Manovra:** `{result['Tiro Manovra (con LD)']}`\n" \
-                    f"- **Confini di Successo:** `{', '.join(map(str, boundaries))}`"
-        embed.add_field(name="📜 Modalità Verbose", value=calc_text, inline=False)
 
     # Send the final response (after deferring)
     await interaction.followup.send(embed=embed)
