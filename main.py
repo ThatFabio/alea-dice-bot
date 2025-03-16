@@ -13,17 +13,19 @@ bot = commands.Bot(command_prefix="!", intents=intents)  # Add a dummy prefix
 def load_thresholds():
     thresholds = []
     success_labels = []
+    success_acronyms = []
     
     with open("thresholds.csv", newline='', encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
             if row[0].isdigit():  # Only append valid numeric thresholds
                 thresholds.append(float(row[0]) / 100)  # Convert % to decimal
-            success_labels.append(row[1])  # Store success labels
+            success_labels.append(row[1])  # Full label
+            success_acronyms.append(row[2])  # Acronym
     
-    return thresholds, success_labels
+    return thresholds, success_labels, success_acronyms
 
-THRESHOLDS, SUCCESS_LABELS = load_thresholds()  # Load at startup
+THRESHOLDS, SUCCESS_LABELS, SUCCESS_ACRONYMS = load_thresholds()  # Load at startup
 
 
 @bot.tree.command(name="alea")
@@ -50,7 +52,7 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
     else:  # Default case (centered view)
         selected_indices = [position - 1, position, position + 1]
 
-    selected_labels = [SUCCESS_LABELS[i] for i in selected_indices]
+    selected_acronyms = [SUCCESS_ACRONYMS[i] for i in selected_indices]
 
     selected_ranges = [
         f"{boundaries[selected_indices[0]-1]+1}-{boundaries[selected_indices[0]]}",  
@@ -63,11 +65,11 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
     if result["Tiro Aperto"]:
         tiro_aperto_text = f"\n**Tiro Aperto!** Il primo tiro (`{result['Primo Tiro']}`) ha attivato un reroll → `{result['Reroll']}`."
 
-    # Format the table using monospaced text (fixed-width alignment)
+    # Format the table using monospaced text (fixed-width alignment, max 7 chars per column)
     table = "```\n"
-    table += f"{selected_labels[0]:^20} | {selected_labels[1]:^20} | {selected_labels[2]:^20}\n"
-    table += f"{'-'*20}|{'-'*20}|{'-'*20}\n"
-    table += f"{selected_ranges[0]:^20} | {selected_ranges[1]:^20} | {selected_ranges[2]:^20}\n"
+    table += f"{selected_acronyms[0]:^7} | {selected_acronyms[1]:^7} | {selected_acronyms[2]:^7}\n"
+    table += f"{'-'*7}|{'-'*7}|{'-'*7}\n"
+    table += f"{selected_ranges[0]:^7} | \033[1m{selected_ranges[1]:^7}\033[0m | {selected_ranges[2]:^7}\n"
     table += "```"
 
     # Emphasized Result Formatting

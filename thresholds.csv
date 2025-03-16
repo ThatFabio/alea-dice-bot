@@ -1,8 +1,8 @@
-10, Successo Assoluto
-50, Successo Pieno
-90, Successo Parziale
-100, Successo Minimo
-110, Fallimento Minimo
-150, Fallimento Parziale
-190, Fallimento Pieno
-999, Fallimento Critico
+10,Successo Assoluto,SA
+50,Successo Pieno,SP
+90,Successo Parziale,Sp
+100,Successo Minimo,SM
+110,Fallimento Minimo,FM
+150,Fallimento Parziale,Fp
+190,Fallimento Pieno,FP
+999,Fallimento Critico,FC
