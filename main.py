@@ -76,8 +76,8 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
     result_line = f"## {result['Risultato']}"
 
     # Create an embed message
-   embed = discord.Embed(
-    title=f"**Tiro 1d100: {result['Tiro 1d100']}**",
+    embed = discord.Embed(
+        title=f"**Tiro 1d100: {result['Tiro 1d100']}**",  # ✅ Properly formatted
         description=(
             f"**Tiro Manovra (con LD):** `{result['Tiro Manovra (con LD)']}`\n"
             f"**Valore Soglia (VS):** `{result['Valore Soglia (VS)']}`\n"
@@ -89,6 +89,7 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
         ),
         color=discord.Color.blue()
     )
+
 
     # Add the formatted table inside the embed
     embed.add_field(name="Soglie di Successo", value=table, inline=False)
