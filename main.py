@@ -74,7 +74,7 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
 
     # Format output based on verbosity
     if not verbose:
-        summary = f"## {SUCCESS_LABELS[position]} {range_text} ✅"
+        summary = f"## {SUCCESS_LABELS[position]} {range_text}"
     else:
         summary = ""
         for i in range(len(boundaries)):
