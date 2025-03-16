@@ -43,7 +43,7 @@ intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.tree.command(name="alea")
-async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: bool = True):
+async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: bool = true):
     """Effettua un tiro ALEA con risposta differita per evitare timeout"""
 
     # Acknowledge the interaction immediately to prevent timeout issues
@@ -53,7 +53,7 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
     result = alea_roll(tv, ld)
 
     # Compute Success Boundaries (Highest number of each category)
-    boundaries = [trunc(tv * threshold) for threshold in THRESHOLDS]
+    boundaries = [round(tv * threshold) for threshold in THRESHOLDS]
 
     # Identify where the result falls
     position = next((i for i, bound in enumerate(boundaries) if result["Tiro Manovra (con LD)"] <= bound), len(boundaries))
