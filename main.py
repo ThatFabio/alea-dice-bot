@@ -42,15 +42,18 @@ THRESHOLDS, SUCCESS_LABELS, SUCCESS_ACRONYMS = load_thresholds()  # Load at star
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-@bot.tree.command(name="alea")
-async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: bool = False):
+# Create command group for /alea
+alea_group = discord.app_commands.Group(name="alea", description="Comandi del sistema ALEA")
+
+@alea_group.command(name="roll", description="Effettua un tiro ALEA")
+async def alea_roll_cmd(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: bool = False):
     """Effettua un tiro ALEA con risposta differita per evitare timeout"""
 
     # Acknowledge the interaction immediately to prevent timeout issues
     await interaction.response.defer()
 
     # Perform the dice roll calculations
-    result = alea_roll(tv, ld)
+    result = dice_roll(tv, ld)
 
     # Compute Success Boundaries (Highest number of each category)
     boundaries = [round(tv * threshold) for threshold in THRESHOLDS]
@@ -102,7 +105,65 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
     # Send the final response (after deferring)
     await interaction.followup.send(embed=embed)
 
-@bot.event
+@alea_group.command(name="help", description="Mostra aiuto su come usare il comando /alea")
+async def alea_help_cmd(interaction: discord.Interaction):
+    """Mostra aiuto su come usare il comando /alea"""
+    
+    embed = discord.Embed(
+        title="📖 Guida al Comando /alea",
+        description="Come usare il sistema di tiri ALEA",
+        color=discord.Color.green()
+    )
+    
+    embed.add_field(
+        name="Utilizzo Base",
+        value="`/alea roll tv:80`\n\nEsegue un tiro 1d100 contro un Valore Soglia (VS) di 80.",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Parametri",
+        value="**tv** (Tiro Valore): Valore Soglia richiesto (0-999+) - *Obbligatorio*\n"
+              "**ld** (Livello Difficoltà): Modificatore di difficoltà (-60 a +60) - *Opzionale, default: 0*\n"
+              "**verbose** (Booleano): Mostra tutti i Gradi di Successo o solo il risultato (true/false) - *Opzionale, default: false*",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Esempi",
+        value="`/alea roll tv:85 ld:10` - Tiro con VS 85 e +10 di difficoltà\n"
+              "`/alea roll tv:50 verbose:true` - Mostra tutti gli 8 gradi di successo\n"
+              "`/alea roll tv:100 ld:-5` - Tiro facilitato di 5 punti",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Gradi di Successo",
+        value="Il sistema ALEA utilizza 8 livelli di successo:\n"
+              "🟢 **Successo Assoluto (SA)** - Successo critico\n"
+              "🟢 **Successo Pieno (SP)** - Successo completo\n"
+              "🟡 **Successo Parziale (Sp)** - Successo con limitazioni\n"
+              "🟡 **Successo Minimo (SM)** - Appena riuscito\n"
+              "🔴 **Fallimento Minimo (FM)** - Quasi fallito\n"
+              "🔴 **Fallimento Parziale (Fp)** - Fallimento con effetti\n"
+              "🔴 **Fallimento Pieno (FP)** - Fallimento totale\n"
+              "⚫ **Fallimento Critico (FC)** - Disastro",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Tiro Aperto",
+        value="Se il 1d100 risulta 1-5 (critico di successo) o 96-100 (critico di fallimento),\n"
+              "il bot esegue automaticamente un reroll e lo combina con il primo risultato!",
+        inline=False
+    )
+    
+    embed.set_footer(text="Sistema ALEA GdR - Tira i dadi con stile!")
+    
+    await interaction.response.send_message(embed=embed)
+
+# Add the group to the bot
+bot.tree.add_command(alea_group)
 async def on_ready():
     if not hasattr(bot, "synced"):
         try:
@@ -112,7 +173,7 @@ async def on_ready():
         except Exception as e:
             print(f"Errore nella sincronizzazione dei comandi: {e}")
 
-def alea_roll(tv, ld, lucky_number=None):
+def dice_roll(tv, ld, lucky_number=None):
     first_roll = random.randint(1, 100)
     final_roll = first_roll
     tiro_aperto = False
