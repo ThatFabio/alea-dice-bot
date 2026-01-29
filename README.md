@@ -1,67 +1,67 @@
-# ALEA Discord Bot
+# Bot Discord ALEA
 
-A Discord slash command bot for the **ALEA GdR** tabletop RPG system. Executes dice rolls with dynamic Gradi di Successo (Degrees of Success) support.
+Un bot Discord con slash command per il sistema di gioco di ruolo tabulare **ALEA GdR**. Esegue tiri di dadi con supporto dinamico per i Gradi di Successo.
 
-## Features
+## Funzionalità
 
-- **`/alea tv:VALUE [ld:MODIFIER] [verbose:BOOL]`** - Execute ALEA dice rolls (1d100)
-  - `tv` (Tiro Valore): Threshold Value (required)
-  - `ld` (Livello Difficoltà): Difficulty modifier (-60 to +60, optional, default: 0)
-  - `verbose` (Boolean): Show all success levels or just result (optional, default: false)
+- **`/alea vs:VALORE [ld:MODIFICATORE] [verbose:BOOLEANO]`** - Esegui tiri ALEA (1d100)
+  - `vs` (Valore Soglia): Valore richiesto (obbligatorio)
+  - `ld` (Livello Difficoltà): Modificatore difficoltà (-60 a +60, opzionale, default: 0)
+  - `verbose` (Booleano): Mostra tutti i Gradi di Successo o solo il risultato (opzionale, default: false)
 
-- **`/alea-help`** - Display usage guide and success level documentation in Italian
+- **`/alea-help`** - Mostra la guida d'uso e documentazione sui Gradi di Successo in italiano
 
-- **Tiro Aperto Support**: Automatic rerolls on critical rolls (1-5, 96-100)
+- **Tiro Aperto**: Reroll automatici su tiri critici (1-5, 96-100)
 
-- **Configurable Success Levels**: Edit `thresholds.csv` to customize the number of Gradi di Successo per campaign
+- **Livelli Successo Configurabili**: Modifica `thresholds.csv` per personalizzare i Gradi di Successo per campagna
 
-## Current Deployment
+## Distribuzione Attuale
 
-**Platform**: Oracle Cloud Free Tier (Always-Free Compute Instance)  
+**Piattaforma**: Oracle Cloud Free Tier (Istanza Compute Always-Free)  
 **OS**: Ubuntu 22.04 LTS  
-**Public IP**: `80.225.89.179`  
-**Service**: `alea-bot.service` (systemd managed)  
-**Auto-Pull**: Every 5 minutes from GitHub (via cron)
+**IP Pubblico**: `80.225.89.179`  
+**Servizio**: `alea-bot.service` (gestito da systemd)  
+**Auto-Pull**: Ogni 5 minuti da GitHub (via cron)
 
-### Running Status
+### Stato del Servizio
 
 ```bash
-# Check service status
+# Controlla stato servizio
 ssh -i YOUR_KEY.key ubuntu@80.225.89.179 "sudo systemctl status alea-bot.service"
 
-# View recent logs
+# Visualizza log recenti
 ssh -i YOUR_KEY.key ubuntu@80.225.89.179 "sudo journalctl -u alea-bot.service -n 50 -f"
 
-# Manually restart
+# Riavvia manualmente
 ssh -i YOUR_KEY.key ubuntu@80.225.89.179 "sudo systemctl restart alea-bot.service"
 ```
 
-## Pushing Updates
+## Inviare Aggiornamenti
 
-### Standard Workflow (Recommended)
+### Workflow Standard (Consigliato)
 
-All updates automatically deploy within **5 minutes**:
+Tutti gli aggiornamenti vengono distribuiti automaticamente entro **5 minuti**:
 
 ```bash
-# From your local machine
+# Dalla tua macchina locale
 cd alea-bot
 git add .
-git commit -m "Your change description"
+git commit -m "Descrizione del cambio"
 git push origin main
 ```
 
-The bot will:
-1. Detect changes via cron (every 5 minutes)
-2. Pull from GitHub
-3. Auto-restart the systemd service
-4. Load new configuration (e.g., `thresholds.csv`)
+Il bot:
+1. Rileva i cambiamenti via cron (ogni 5 minuti)
+2. Esegue il pull da GitHub
+3. Riavvia automaticamente il servizio systemd
+4. Carica nuova configurazione (es. `thresholds.csv`)
 
-### Instant Deployment from Cloud Shell
+### Distribuzione Istantanea da Cloud Shell
 
-If you need immediate deployment (don't want to wait 5 minutes):
+Se hai bisogno di distribuzione immediata (senza aspettare 5 minuti):
 
 ```bash
-# From Oracle Cloud Shell (or SSH)
+# Da Oracle Cloud Shell (o SSH)
 ssh -i ~/ssh-private-key-2026-01-29.key ubuntu@80.225.89.179 << 'CMD'
 cd /home/deploy/alea-dice-bot
 sudo -u deploy git pull origin main
@@ -69,15 +69,15 @@ sudo systemctl restart alea-bot.service
 CMD
 ```
 
-### Full Directory Upload (Emergency Override)
+### Upload Completa Directory (Override Emergenza)
 
-For complete directory replacement from Cloud Shell:
+Per rimpiazzare completamente la directory da Cloud Shell:
 
 ```bash
-# Upload entire repo
+# Carica intero repo
 scp -r -i ~/ssh-private-key-2026-01-29.key ~/alea-dice-bot ubuntu@80.225.89.179:/tmp/alea-dice-bot-new
 
-# Replace and restart
+# Rimpiazza e riavvia
 ssh -i ~/ssh-private-key-2026-01-29.key ubuntu@80.225.89.179 << 'CMD'
 sudo rm -rf /home/deploy/alea-dice-bot
 sudo mv /tmp/alea-dice-bot-new /home/deploy/alea-dice-bot
@@ -86,14 +86,14 @@ sudo systemctl restart alea-bot.service
 CMD
 ```
 
-## Configuration
+## Configurazione
 
-### Gradi di Successo (Success Levels)
+### Gradi di Successo
 
-Edit `thresholds.csv` to customize success categories. Format:
+Modifica `thresholds.csv` per personalizzare le categorie di successo. Formato:
 
 ```csv
-percentage_threshold, full_label, acronym
+percentuale_soglia, etichetta_completa, acronimo
 10,Successo Assoluto,SA
 70,Successo Pieno,SP
 100,Successo Parziale,Sp
@@ -102,36 +102,36 @@ percentage_threshold, full_label, acronym
 999,Fallimento Critico,FC
 ```
 
-- **Percentage threshold**: When roll exceeds this % of VS
-- **Full label**: Italian name displayed in Discord
-- **Acronym**: Short code shown in results
+- **Percentuale soglia**: Quando il tiro supera questa % del Valore Soglia
+- **Etichetta completa**: Nome in italiano visualizzato in Discord
+- **Acronimo**: Codice breve mostrato nei risultati
 
-The bot dynamically loads any number of levels (6, 8, 10+). Update and push to deploy.
+Il bot carica dinamicamente qualsiasi numero di livelli (6, 8, 10+). Aggiorna e fai il push per distribuire.
 
-### Environment Variables
+### Variabili d'Ambiente
 
-- `DISCORD_BOT_TOKEN`: Your Discord bot token (stored in systemd service)
+- `DISCORD_BOT_TOKEN`: Token del tuo bot Discord (memorizzato nel servizio systemd)
 
-## Repository Structure
+## Struttura Repository
 
 ```
 alea-bot/
-├── main.py              # Bot entry point with slash commands
-├── requirements.txt     # Python dependencies (discord.py, flask)
-├── thresholds.csv       # Success level configuration
-├── deploy-oracle.sh     # Deployment script (reference)
-└── README.md           # This file
+├── main.py              # Entry point bot con slash command
+├── requirements.txt     # Dipendenze Python (discord.py, flask)
+├── thresholds.csv       # Configurazione livelli successo
+├── deploy-oracle.sh     # Script distribuzione (riferimento)
+└── README.md            # Questo file
 ```
 
-## Dependencies
+## Dipendenze
 
-- `discord.py` (2.6.4+) - Discord bot framework
-- `flask` - Keep-alive server for Render compatibility (kept for reference, not needed on Oracle)
+- `discord.py` (2.6.4+) - Framework bot Discord
+- `flask` - Server keep-alive per compatibilità Render (mantenuto per riferimento, non necessario su Oracle)
 - Python 3.10+
 
-## Development
+## Sviluppo
 
-### Local Testing
+### Test Locale
 
 ```bash
 pip install -r requirements.txt
@@ -139,67 +139,67 @@ export DISCORD_BOT_TOKEN="your_token_here"
 python3 main.py
 ```
 
-### Deploying Changes
+### Distribuire Cambiamenti
 
-1. **Edit code locally** (main.py, thresholds.csv, etc.)
-2. **Test locally** with environment variable
-3. **Commit and push**:
+1. **Modifica codice localmente** (main.py, thresholds.csv, ecc.)
+2. **Test localmente** con variabile d'ambiente
+3. **Commit e push**:
    ```bash
    git add .
-   git commit -m "Description"
+   git commit -m "Descrizione"
    git push origin main
    ```
-4. **Wait 5 minutes** for auto-pull and restart (or force immediately with SSH command)
+4. **Aspetta 5 minuti** per auto-pull e riavvio (o forza immediatamente con comando SSH)
 
-## Troubleshooting
+## Risoluzione Problemi
 
-### Bot not responding to commands
+### Bot non risponde ai comandi
 
-Check logs:
+Controlla i log:
 ```bash
 ssh -i YOUR_KEY.key ubuntu@80.225.89.179 "sudo journalctl -u alea-bot.service -n 100 | grep -i error"
 ```
 
-### Manual service restart
+### Riavvio manuale servizio
 
 ```bash
 ssh -i YOUR_KEY.key ubuntu@80.225.89.179 "sudo systemctl restart alea-bot.service"
 ```
 
-### View thresholds loaded by bot
+### Visualizza soglie caricate dal bot
 
-Check the CSV file on instance:
+Controlla il file CSV sull'istanza:
 ```bash
 ssh -i YOUR_KEY.key ubuntu@80.225.89.179 "sudo -u deploy cat /home/deploy/alea-dice-bot/thresholds.csv"
 ```
 
-### Force immediate update from GitHub
+### Forza aggiornamento immediato da GitHub
 
 ```bash
 ssh -i YOUR_KEY.key ubuntu@80.225.89.179 "cd /home/deploy/alea-dice-bot && sudo -u deploy git pull origin main"
 ```
 
-## System Architecture
+## Architettura Sistema
 
-**Deployment Flow:**
+**Flusso Distribuzione:**
 ```
 GitHub (alea-dice-bot)
     ↓
-Cron job (every 5 min): git pull + systemctl restart
+Cron job (ogni 5 min): git pull + systemctl restart
     ↓
 /home/deploy/alea-dice-bot/main.py
     ↓
-systemd service (alea-bot.service)
+Servizio systemd (alea-bot.service)
     ↓
-Discord API → Your Server
+API Discord → Tuo Server
 ```
 
-**Always-On**: Systemd handles restart on crash (`Restart=always`, `RestartSec=10`)
+**Always-On**: Systemd gestisce riavvio su crash (`Restart=always`, `RestartSec=10`)
 
-## License
+## Licenza
 
-Part of ALEA GdR system
+Parte del sistema ALEA GdR
 
-## Support
+## Supporto
 
-For issues, check logs on Oracle instance or review deployment instructions above.
+Per problemi, controlla i log sull'istanza Oracle o rivedi le istruzioni di distribuzione sopra.

@@ -43,17 +43,17 @@ intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.tree.command(name="alea", description="Effettua un tiro ALEA")
-async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: bool = False):
+async def alea(interaction: discord.Interaction, vs: int, ld: int = 0, verbose: bool = False):
     """Effettua un tiro ALEA con risposta differita per evitare timeout"""
 
     # Acknowledge the interaction immediately to prevent timeout issues
     await interaction.response.defer()
 
     # Perform the dice roll calculations
-    result = dice_roll(tv, ld)
+    result = dice_roll(vs, ld)
 
     # Compute Success Boundaries (Highest number of each category)
-    boundaries = [round(tv * threshold) for threshold in THRESHOLDS]
+    boundaries = [round(vs * threshold) for threshold in THRESHOLDS]
 
     # Identify where the result falls
     position = next((i for i, bound in enumerate(boundaries) if result["Tiro Manovra (con LD)"] <= bound), len(boundaries))
@@ -89,8 +89,8 @@ async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: 
         title=f"**Tiro 1d100: {result['Tiro 1d100']}**",
         description=(
             f"**Tiro Manovra (con LD):** `{result['Tiro Manovra (con LD)']}`\n"
-            f"**Valore Soglia (VS):** `{result['Valore Soglia (VS)']}`\n"
-            f"**Livello Difficoltà (LD):** `{result['Livello Difficoltà (LD)']}`\n"
+            f"**VS (Valore Soglia):** `{result['Valore Soglia (VS)']}`\n"
+            f"**LD (Livello Difficoltà):** `{result['Livello Difficoltà (LD)']}`\n"
             "━━━━━━━━━━━━━━━\n"
             f"{summary}\n"
             "━━━━━━━━━━━━━━━"
@@ -114,23 +114,23 @@ async def alea_help(interaction: discord.Interaction):
     
     embed.add_field(
         name="Utilizzo Base",
-        value="`/alea tv:80`\n\nEsegue un tiro 1d100 contro un Valore Soglia (VS) di 80.",
+        value="`/alea vs:80`\n\nEsegue un tiro 1d100 contro un Valore Soglia (VS) di 80.",
         inline=False
     )
     
     embed.add_field(
         name="Parametri",
-        value="**tv** (Tiro Valore): Valore Soglia richiesto (0-999+) - *Obbligatorio*\n"
+        value="**vs** (Valore Soglia): Valore Soglia richiesto (0-999+) - *Obbligatorio*\n"
               "**ld** (Livello Difficoltà): Modificatore di difficoltà (-60 a +60) - *Opzionale, default: 0*\n"
-              "**verbose** (Booleano): Mostra tutti i Gradi di Successo o solo il risultato (true/false) - *Opzionale, default: false*",
+              "**Verbose**: Mostra tutti i Gradi di Successo o solo il risultato (true/false) - *Opzionale, default: false*",
         inline=False
     )
     
     embed.add_field(
         name="Esempi",
-        value="`/alea tv:85 ld:10` - Tiro con VS 85 e +10 di difficoltà\n"
-              "`/alea tv:50 verbose:true` - Mostra tutti gli 8 gradi di successo\n"
-              "`/alea tv:100 ld:-5` - Tiro facilitato di 5 punti",
+        value="`/alea vs:85 ld:10` - Tiro con VS 85 e +10 di difficoltà\n"
+              "`/alea vs:50 Verbose:true` - Mostra tutti i Gradi di Successo\n"
+              "`/alea vs:100 ld:-5` - Tiro facilitato di 5 punti",
         inline=False
     )
     
@@ -167,7 +167,7 @@ async def on_ready():
         except Exception as e:
             print(f"Errore nella sincronizzazione dei comandi: {e}")
 
-def dice_roll(tv, ld, lucky_number=None):
+def dice_roll(vs, ld, lucky_number=None):
     first_roll = random.randint(1, 100)
     final_roll = first_roll
     tiro_aperto = False
@@ -185,7 +185,7 @@ def dice_roll(tv, ld, lucky_number=None):
 
     final_roll += ld
 
-    ratio = (final_roll / tv) * 100 if tv > 0 else float('inf')
+    ratio = (final_roll / vs) * 100 if vs > 0 else float('inf')
     result = SUCCESS_LABELS[next((i for i, bound in enumerate(THRESHOLDS) if final_roll <= bound), len(SUCCESS_LABELS) - 1)]
 
     return {
@@ -194,7 +194,7 @@ def dice_roll(tv, ld, lucky_number=None):
         "Tiro Aperto": tiro_aperto,
         "Tiro 1d100": first_roll,
         "Tiro Manovra (con LD)": final_roll,
-        "Valore Soglia (VS)": tv,
+        "Valore Soglia (VS)": vs,
         "Livello Difficoltà (LD)": ld,
         "Risultato": result
     }
