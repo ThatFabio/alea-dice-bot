@@ -43,7 +43,7 @@ intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.tree.command(name="alea")
-async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: bool = True):
+async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: bool = False):
     """Effettua un tiro ALEA con risposta differita per evitare timeout"""
 
     # Acknowledge the interaction immediately to prevent timeout issues
