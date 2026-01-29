@@ -42,11 +42,8 @@ THRESHOLDS, SUCCESS_LABELS, SUCCESS_ACRONYMS = load_thresholds()  # Load at star
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Create command group for /alea
-alea_group = discord.app_commands.Group(name="alea", description="Comandi del sistema ALEA")
-
-@alea_group.command(name="roll", description="Effettua un tiro ALEA")
-async def alea_roll_cmd(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: bool = False):
+@bot.tree.command(name="alea", description="Effettua un tiro ALEA")
+async def alea(interaction: discord.Interaction, tv: int, ld: int = 0, verbose: bool = False):
     """Effettua un tiro ALEA con risposta differita per evitare timeout"""
 
     # Acknowledge the interaction immediately to prevent timeout issues
@@ -105,8 +102,8 @@ async def alea_roll_cmd(interaction: discord.Interaction, tv: int, ld: int = 0, 
     # Send the final response (after deferring)
     await interaction.followup.send(embed=embed)
 
-@alea_group.command(name="help", description="Mostra aiuto su come usare il comando /alea")
-async def alea_help_cmd(interaction: discord.Interaction):
+@bot.tree.command(name="alea-help", description="Mostra aiuto su come usare il comando /alea")
+async def alea_help(interaction: discord.Interaction):
     """Mostra aiuto su come usare il comando /alea"""
     
     embed = discord.Embed(
@@ -117,7 +114,7 @@ async def alea_help_cmd(interaction: discord.Interaction):
     
     embed.add_field(
         name="Utilizzo Base",
-        value="`/alea roll tv:80`\n\nEsegue un tiro 1d100 contro un Valore Soglia (VS) di 80.",
+        value="`/alea tv:80`\n\nEsegue un tiro 1d100 contro un Valore Soglia (VS) di 80.",
         inline=False
     )
     
@@ -131,9 +128,9 @@ async def alea_help_cmd(interaction: discord.Interaction):
     
     embed.add_field(
         name="Esempi",
-        value="`/alea roll tv:85 ld:10` - Tiro con VS 85 e +10 di difficoltà\n"
-              "`/alea roll tv:50 verbose:true` - Mostra tutti gli 8 gradi di successo\n"
-              "`/alea roll tv:100 ld:-5` - Tiro facilitato di 5 punti",
+        value="`/alea tv:85 ld:10` - Tiro con VS 85 e +10 di difficoltà\n"
+              "`/alea tv:50 verbose:true` - Mostra tutti gli 8 gradi di successo\n"
+              "`/alea tv:100 ld:-5` - Tiro facilitato di 5 punti",
         inline=False
     )
     
@@ -161,9 +158,6 @@ async def alea_help_cmd(interaction: discord.Interaction):
     embed.set_footer(text="Sistema ALEA GdR - Tira i dadi con stile!")
     
     await interaction.response.send_message(embed=embed)
-
-# Add the group to the bot
-bot.tree.add_command(alea_group)
 async def on_ready():
     if not hasattr(bot, "synced"):
         try:
