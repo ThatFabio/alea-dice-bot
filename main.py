@@ -136,15 +136,9 @@ async def alea_help(interaction: discord.Interaction):
     
     embed.add_field(
         name="Gradi di Successo",
-        value="Il sistema ALEA utilizza 8 livelli di successo:\n"
-              "🟢 **Successo Assoluto (SA)** - Successo critico\n"
-              "🟢 **Successo Pieno (SP)** - Successo completo\n"
-              "🟡 **Successo Parziale (Sp)** - Successo con limitazioni\n"
-              "🟡 **Successo Minimo (SM)** - Appena riuscito\n"
-              "🔴 **Fallimento Minimo (FM)** - Quasi fallito\n"
-              "🔴 **Fallimento Parziale (Fp)** - Fallimento con effetti\n"
-              "🔴 **Fallimento Pieno (FP)** - Fallimento totale\n"
-              "⚫ **Fallimento Critico (FC)** - Disastro",
+        value=f"Il sistema ALEA utilizza {len(SUCCESS_LABELS)} livelli di successo:\n" + 
+              "\n".join([f"**{SUCCESS_LABELS[i]} ({SUCCESS_ACRONYMS[i]})** - Soglia {THRESHOLDS[i]*100:.0f}%" 
+                        for i in range(len(SUCCESS_LABELS))]),
         inline=False
     )
     
