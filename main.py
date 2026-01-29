@@ -158,6 +158,8 @@ async def alea_help(interaction: discord.Interaction):
     embed.set_footer(text="Sistema ALEA GdR - Tira i dadi con stile!")
     
     await interaction.response.send_message(embed=embed)
+
+@bot.event
 async def on_ready():
     if not hasattr(bot, "synced"):
         try:
