@@ -111,9 +111,15 @@ async def alea(interaction: discord.Interaction, vs: int = 0, ld: int = 0, verbo
     # Acknowledge the interaction immediately to prevent timeout issues
     await interaction.response.defer()
     
+    # Converti SPEC da {0, 1, 2} a {0, 20, 30}
+    if spec not in [0, 1, 2]:
+        await interaction.followup.send("❌ SPEC deve essere 0, 1 o 2 (non 20 o 30)", ephemeral=True)
+        return
+    spec_value = {0: 0, 1: 20, 2: 30}[spec]
+    
     # Se VS non è fornito direttamente, calcola da CAR+ABI+SPEC
     if vs == 0 and (car > 0 or abi > 0 or spec > 0):
-        vs = car + abi + spec
+        vs = car + abi + spec_value
         if vs == 0:
             await interaction.followup.send("❌ Devi fornire VS direttamente o almeno uno tra CAR, ABI, SPEC", ephemeral=True)
             return
@@ -166,7 +172,7 @@ async def alea(interaction: discord.Interaction, vs: int = 0, ld: int = 0, verbo
     # Crea stringa parametri aggiuntivi se forniti
     param_extra = ""
     if car > 0 or abi > 0 or spec > 0:
-        param_extra += f"**CAR (Caratteristica):** `{car}` | **ABI (Abilità):** `{abi}` | **SPEC:** `{spec}`\n"
+        param_extra += f"**CAR (Caratteristica):** `{car}` | **ABI (Abilità):** `{abi}` | **SPEC:** `{spec}` (={spec_value})\n"
     if lf > 0 or la > 0 or ls > 0:
         param_extra += f"**LF (Ferite):** `{lf}` | **LA (Affaticamento):** `{la}` | **LS (Stordimento):** `{ls}`\n"
     
@@ -216,7 +222,7 @@ async def alea_help(interaction: discord.Interaction):
         name="Parametri MISO Avanzati (Opzionali)",
         value="**car** (Caratteristica): Valore caratteristica (0-50+)\n"
               "**abi** (Abilità): Valore abilità (0-100+)\n"
-              "**spec** (Specializzazione): Valore specializzazione {0, 20, 30}\n"
+              "**spec** (Specializzazione): Livello specializzazione {0=nessuna, 1=+20, 2=+30}\n"
               "**lf** (Livello Ferite): Livello ferite (0-10)\n"
               "**la** (Livello Affaticamento): Livello affaticamento (0-4)\n"
               "**ls** (Livello Stordimento): Livello stordimento (0-4)\n\n"
@@ -227,7 +233,7 @@ async def alea_help(interaction: discord.Interaction):
     embed.add_field(
         name="Esempi",
         value="`/alea vs:85 ld:10` - Tiro con VS 85 e +10 di difficoltà\n"
-              "`/alea car:25 abi:45 spec:20` - Tiro calcolato (VS=90)\n"
+              "`/alea car:25 abi:45 spec:2` - Tiro calcolato (25+45+30=100)\n"
               "`/alea vs:50 lf:4 la:1` - Con ferita leggera + affaticamento\n"
               "`/alea vs:100 verbose:true` - Mostra tutti i Gradi di Successo",
         inline=False
@@ -316,13 +322,16 @@ def dice_roll_alea99(n, vs, ld):
     }
 
 @bot.tree.command(name="alea99", description="Effettua un tiro ALEA99 (Nd10)")
-async def alea99(interaction: discord.Interaction, vs: int, n: int = 2, ld: int = 0, verbose: bool = False):
-    """Effettua un tiro ALEA99 con N d10. VS è il parametro principale, N di default è 2"""
+async def alea99(interaction: discord.Interaction, vs: int, spec: int = 0, ld: int = 0, verbose: bool = False):
+    """Effettua un tiro ALEA99 con N d10. N = 2 + SPEC"""
     
-    # Validate n parameter
-    if n < 2 or n > 5:
-        await interaction.response.send_message("❌ Il numero di dadi deve essere tra 2 e 5 (N ∈ {2, 3, 4, 5})", ephemeral=True)
+    # Validate spec parameter (0, 1, 2, 3)
+    if spec < 0 or spec > 3:
+        await interaction.response.send_message("❌ SPEC deve essere 0, 1, 2 o 3 (N = 2+SPEC, quindi 2-5 dadi)", ephemeral=True)
         return
+    
+    # Calcola N da SPEC: N = 2 + SPEC
+    n = 2 + spec
     
     await interaction.response.defer()
     
@@ -380,15 +389,16 @@ async def alea99_help(interaction: discord.Interaction):
     
     embed.add_field(
         name="Utilizzo Base",
-        value="`/alea99 vs:50`\n\nTira 2d10 (default), estrae i 2 più bassi, e confronta con Valore Soglia 50.\n"
-              "`/alea99 vs:50 n:4` - Tira 4d10 invece che 2.",
+        value="`/alea99 vs:50`\n\nTira 2d10 (SPEC=0, default), estrae i 2 più bassi, e confronta con Valore Soglia 50.\n"
+              "`/alea99 vs:50 spec:2` - Tira 4d10 (SPEC=2 → N=2+2=4).",
         inline=False
     )
     
     embed.add_field(
         name="Parametri",
         value="**vs** (Valore Soglia): Soglia di confronto (0-99) - *Obbligatorio*\n"
-              "**n** (Numero dadi): Quanti d10 tirare {2, 3, 4, 5} - *Opzionale, default: 2*\n"
+              "**spec** (Specializzazione): Livello specializzazione {0=2d10, 1=3d10, 2=4d10, 3=5d10} - *Opzionale, default: 0*\n"
+              "  → Formula: N = 2 + SPEC\n"
               "**ld** (Livello Difficoltà): Modificatore al VS (⚠️ **LD è sulla DESTRA**: VS_effettivo = VS + LD) - *Opzionale, default: 0*\n"
               "**verbose**: Mostra la legenda completa (true/false) - *Opzionale, default: false*",
         inline=False
@@ -396,7 +406,7 @@ async def alea99_help(interaction: discord.Interaction):
     
     embed.add_field(
         name="Come Funziona",
-        value="1️⃣ Si tirano **N d10** (valori da 0 a 9)\n"
+        value="1️⃣ Si tirano **N = 2 + SPEC** d10 (valori da 0 a 9)\n"
               "2️⃣ Si **ordinano dal più basso al più alto**\n"
               "3️⃣ Si **prendono solo i 2 più bassi**\n"
               "4️⃣ Si forma un numero a 2 cifre: **[decina][unità]**\n"
@@ -416,9 +426,9 @@ async def alea99_help(interaction: discord.Interaction):
     
     embed.add_field(
         name="Esempi Pratici",
-        value="`/alea99 vs:50` - Tira 2d10 (default) con VS 50\n"
-              "`/alea99 vs:45 n:3 ld:5` - Tira 3d10 con VS 45 e LD +5 (VS Effettivo = 50)\n"
-              "`/alea99 vs:60 n:4 verbose:true` - Tira 4d10 con VS 60, mostra legenda\n"
+        value="`/alea99 vs:50` - Tira 2d10 (SPEC=0, default) con VS 50\n"
+              "`/alea99 vs:45 spec:1 ld:5` - Tira 3d10 (SPEC=1 → N=3) con VS 45 e LD +5 (VS Effettivo = 50)\n"
+              "`/alea99 vs:60 spec:2 verbose:true` - Tira 4d10 (SPEC=2) con VS 60, mostra legenda\n"
               "`/alea99 vs:30 ld:-10` - Tira 2d10 con VS 30 e LD -10 (VS Effettivo = 20)",
         inline=False
     )

@@ -15,34 +15,35 @@ Un bot Discord con slash command per il sistema di gioco di ruolo tabulare **ALE
   - **Parametri MISO Avanzati (Opzionali):**
     - `car` (Caratteristica): Valore caratteristica (0-50+)
     - `abi` (Abilità): Valore abilità (0-100+)
-    - `spec` (Specializzazione): Specializzazione bonus {0, 20, 30}
+    - `spec` (Specializzazione): Livello specializzazione {0=nessuna, 1=+20, 2=+30}
     - `lf` (Livello Ferite): Livello ferite (0-10)
     - `la` (Livello Affaticamento): Livello affaticamento (0-4)
     - `ls` (Livello Stordimento): Livello stordimento (0-4)
   
   - **Esempi:**
     - `/alea vs:80` - Tiro semplice con VS 80
-    - `/alea car:25 abi:45 spec:20` - VS calcolato (25+45+20=90)
+    - `/alea car:25 abi:45 spec:2` - VS calcolato (25+45+30=100)
     - `/alea vs:60 lf:5 la:1 ld:10` - Con stati e modificatori
 
 ### Sistema ALEA99 (Nd10)
 
-- **`/alea99 vs:VALORE [n:NUMERO_DADI] [ld:MODIFICATORE] [verbose:BOOL]`** - Tiro ALEA99 con dadi d10
+- **`/alea99 vs:VALORE [spec:LIVELLO_SPEC] [ld:MODIFICATORE] [verbose:BOOL]`** - Tiro ALEA99 con dadi d10
   - `vs` (Valore Soglia): Valore richiesto (0-99, obbligatorio)
-  - `n` (Numero dadi): Quantità di d10 {2, 3, 4, 5} (opzionale, default: 2)
+  - `spec` (Specializzazione): Livello specializzazione (opzionale, default: 0)
+    - Formula: **N = 2 + SPEC**
+    - SPEC {0, 1, 2, 3} → N {2d10, 3d10, 4d10, 5d10}
   - `ld` (Livello Difficoltà): ⚠️ Modificatore **sulla destra**: VS_effettivo = VS + LD (opzionale, default: 0)
   - `verbose` (Booleano): Mostra la legenda completa (opzionale, default: false)
   
   - **Esempi:**
-    - `/alea99 vs:50` - Tira 2d10 con VS 50
-    - `/alea99 vs:45 n:4 ld:5` - Tira 4d10 con VS 45 e LD +5 (VS_effettivo = 50)
+    - `/alea99 vs:50` - Tira 2d10 (SPEC=0) con VS 50
+    - `/alea99 vs:45 spec:2 ld:5` - Tira 4d10 (SPEC=2 → N=4) con VS 45 e LD +5
 
 ### Comandi di Aiuto
 
 - **`/alea-help`** - Guida completa al sistema ALEA con formule e parametri
 
 - **`/alea99-help`** - Guida al sistema ALEA99 con spiegazione delle cifre identiche
-
 - **Tiro Aperto** (ALEA classico): Reroll automatici su tiri critici (1-5, 96-100)
 
 - **Livelli Successo Configurabili**: Modifica `thresholds.csv` per personalizzare i Gradi di Successo per campagna
@@ -218,7 +219,8 @@ ssh -i YOUR_KEY.key ubuntu@80.225.89.179 "cd /home/deploy/alea-dice-bot && sudo 
 
 **Formula Completa:**
 ```
-VS_baseline = CAR + ABI + SPEC
+VS_baseline = CAR + ABI + SPEC_value
+  dove SPEC_value = {0: 0, 1: 20, 2: 30}
 M_Stato = malus_ferite + malus_affaticamento + malus_stordimento
 TM = 1d100 + LD + M_Stato
 Successo se: TM ≤ VS_baseline
@@ -227,7 +229,7 @@ Successo se: TM ≤ VS_baseline
 **Parametri Opzionali Supportati:**
 - **CAR (Caratteristica)**: Caratteristica primaria base (0-50+), es. Forza, Intelligenza, Carisma
 - **ABI (Abilità)**: Livello di addestramento (0-100+)
-- **SPEC (Specializzazione)**: Bonus specialistico {0, +20, +30}
+- **SPEC (Specializzazione)**: Livello specializzazione {0=nessuna, 1=+20, 2=+30}
 - **LF (Livello Ferite)**: Danni subiti (0-10, dove 10 = incoscienza)
   - LF 0-3: Salute (malus 0)
   - LF 4-5: Ferita Leggera (malus +20)
@@ -248,7 +250,8 @@ Successo se: TM ≤ VS_baseline
 
 **Formula:**
 ```
-Risultato = Nd10, prendi i 2 dadi più bassi ordinati
+N = 2 + SPEC  (SPEC ∈ {0, 1, 2, 3} → N ∈ {2d10, 3d10, 4d10, 5d10})
+Risultato = prendi i 2 dadi più bassi ordinati da Nd10
 VS_effettivo = VS + LD  (LD sulla DESTRA, a differenza di ALEA)
 Successo se: Risultato ≤ VS_effettivo
 
