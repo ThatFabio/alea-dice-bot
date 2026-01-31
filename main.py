@@ -103,15 +103,32 @@ def format_success_levels():
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-@bot.tree.command(name="alea", description="Effettua un tiro ALEA")
-async def alea(interaction: discord.Interaction, vs: int, ld: int = 0, verbose: bool = False):
-    """Effettua un tiro ALEA con risposta differita per evitare timeout"""
+@bot.tree.command(name="alea", description="Effettua un tiro ALEA con parametri completi del sistema MISO")
+async def alea(interaction: discord.Interaction, vs: int = 0, ld: int = 0, verbose: bool = False,
+              car: int = 0, abi: int = 0, spec: int = 0, lf: int = 0, la: int = 0, ls: int = 0):
+    """Effettua un tiro ALEA con parametri opzionali del sistema MISO"""
 
     # Acknowledge the interaction immediately to prevent timeout issues
     await interaction.response.defer()
+    
+    # Se VS non è fornito direttamente, calcola da CAR+ABI+SPEC
+    if vs == 0 and (car > 0 or abi > 0 or spec > 0):
+        vs = car + abi + spec
+        if vs == 0:
+            await interaction.followup.send("❌ Devi fornire VS direttamente o almeno uno tra CAR, ABI, SPEC", ephemeral=True)
+            return
+    elif vs == 0:
+        await interaction.followup.send("❌ Devi fornire il Valore Soglia (VS) o i parametri CAR/ABI/SPEC", ephemeral=True)
+        return
+    
+    # Calcola malus da stato
+    malus_lf = 0 if lf <= 3 else (20 if lf <= 5 else (40 if lf <= 7 else (60 if lf <= 9 else float('inf'))))
+    malus_la = 0 if la == 0 else (20 if la == 1 else (40 if la == 2 else (60 if la == 3 else float('inf'))))
+    malus_ls = 0 if ls == 0 else (20 if ls == 1 else (40 if ls == 2 else (60 if ls == 3 else float('inf'))))
+    malus_stato = malus_lf + malus_la + malus_ls
 
     # Perform the dice roll calculations
-    result = dice_roll(vs, ld)
+    result = dice_roll(vs, ld, malus_stato)
 
     # Compute Success Boundaries (Highest number of each category)
     boundaries = [round(vs * threshold) for threshold in THRESHOLDS]
@@ -146,12 +163,20 @@ async def alea(interaction: discord.Interaction, vs: int, ld: int = 0, verbose: 
             summary += f"**{SUCCESS_LABELS[i]}** {range_text}{checkmark}\n"
 
     # Create an embed message
+    # Crea stringa parametri aggiuntivi se forniti
+    param_extra = ""
+    if car > 0 or abi > 0 or spec > 0:
+        param_extra += f"**CAR (Caratteristica):** `{car}` | **ABI (Abilità):** `{abi}` | **SPEC:** `{spec}`\n"
+    if lf > 0 or la > 0 or ls > 0:
+        param_extra += f"**LF (Ferite):** `{lf}` | **LA (Affaticamento):** `{la}` | **LS (Stordimento):** `{ls}`\n"
+    
     embed = discord.Embed(
         title=f"**Tiro 1d100: {result['Tiro 1d100']}**",
         description=(
-            f"**Tiro Manovra (con LD):** `{result['Tiro Manovra (con LD)']}`\n"
+            f"**Tiro Manovra (con LD+Stati):** `{result['Tiro Manovra (con LD)']}`\n"
             f"**VS (Valore Soglia):** `{result['Valore Soglia (VS)']}`\n"
             f"**LD (Livello Difficoltà):** `{result['Livello Difficoltà (LD)']}`\n"
+            f"{param_extra}"
             "━━━━━━━━━━━━━━━\n"
             f"{summary}\n"
             "━━━━━━━━━━━━━━━"
@@ -180,18 +205,31 @@ async def alea_help(interaction: discord.Interaction):
     )
     
     embed.add_field(
-        name="Parametri",
-        value="**vs** (Valore Soglia): Valore Soglia richiesto (0-999+) - *Obbligatorio*\n"
+        name="Parametri Base",
+        value="**vs** (Valore Soglia): Valore Soglia diretto (0-999+) - *Opzionale se forniti CAR/ABI/SPEC*\n"
               "**ld** (Livello Difficoltà): Modificatore di difficoltà (-60 a +60) - *Opzionale, default: 0*\n"
-              "**Verbose**: Mostra tutti i Gradi di Successo o solo il risultato (true/false) - *Opzionale, default: false*",
+              "**verbose**: Mostra tutti i Gradi di Successo o solo il risultato (true/false) - *Opzionale, default: false*",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Parametri MISO Avanzati (Opzionali)",
+        value="**car** (Caratteristica): Valore caratteristica (0-50+)\n"
+              "**abi** (Abilità): Valore abilità (0-100+)\n"
+              "**spec** (Specializzazione): Valore specializzazione {0, 20, 30}\n"
+              "**lf** (Livello Ferite): Livello ferite (0-10)\n"
+              "**la** (Livello Affaticamento): Livello affaticamento (0-4)\n"
+              "**ls** (Livello Stordimento): Livello stordimento (0-4)\n\n"
+              "*Se forniti CAR/ABI/SPEC e VS=0, VS viene calcolato: VS = CAR + ABI + SPEC*",
         inline=False
     )
     
     embed.add_field(
         name="Esempi",
         value="`/alea vs:85 ld:10` - Tiro con VS 85 e +10 di difficoltà\n"
-              "`/alea vs:50 Verbose:true` - Mostra tutti i Gradi di Successo\n"
-              "`/alea vs:100 ld:-5` - Tiro facilitato di 5 punti",
+              "`/alea car:25 abi:45 spec:20` - Tiro calcolato (VS=90)\n"
+              "`/alea vs:50 lf:4 la:1` - Con ferita leggera + affaticamento\n"
+              "`/alea vs:100 verbose:true` - Mostra tutti i Gradi di Successo",
         inline=False
     )
     
@@ -278,8 +316,8 @@ def dice_roll_alea99(n, vs, ld):
     }
 
 @bot.tree.command(name="alea99", description="Effettua un tiro ALEA99 (Nd10)")
-async def alea99(interaction: discord.Interaction, n: int, vs: int, ld: int = 0, verbose: bool = False):
-    """Effettua un tiro ALEA99 con N d10"""
+async def alea99(interaction: discord.Interaction, vs: int, n: int = 2, ld: int = 0, verbose: bool = False):
+    """Effettua un tiro ALEA99 con N d10. VS è il parametro principale, N di default è 2"""
     
     # Validate n parameter
     if n < 2 or n > 5:
@@ -289,8 +327,7 @@ async def alea99(interaction: discord.Interaction, n: int, vs: int, ld: int = 0,
     await interaction.response.defer()
     
     result = dice_roll_alea99(n, vs, ld)
-    
-    # Format the rolls display
+        # Format the rolls display
     rolls_display = " ".join([f"`{d}`" for d in result["Tiri Completi"]])
     two_lowest_display = " ".join([f"**{d}**" for d in result["Due Più Bassi"]])
     
@@ -343,16 +380,17 @@ async def alea99_help(interaction: discord.Interaction):
     
     embed.add_field(
         name="Utilizzo Base",
-        value="`/alea99 n:4 vs:50`\n\nTira 4d10, estrae i 2 più bassi, e confronta con Valore Soglia 50.",
+        value="`/alea99 vs:50`\n\nTira 2d10 (default), estrae i 2 più bassi, e confronta con Valore Soglia 50.\n"
+              "`/alea99 vs:50 n:4` - Tira 4d10 invece che 2.",
         inline=False
     )
     
     embed.add_field(
         name="Parametri",
-        value="**n** (Numero dadi): Quanti d10 tirare {2, 3, 4, 5} - *Obbligatorio*\n"
-              "**vs** (Valore Soglia): Soglia di confronto (0-99) - *Obbligatorio*\n"
-              "**ld** (Livello Difficoltà): Modificatore al VS (-60 a +60) - *Opzionale, default: 0*\n"
-              "**Verbose**: Mostra la legenda completa (true/false) - *Opzionale, default: false*",
+        value="**vs** (Valore Soglia): Soglia di confronto (0-99) - *Obbligatorio*\n"
+              "**n** (Numero dadi): Quanti d10 tirare {2, 3, 4, 5} - *Opzionale, default: 2*\n"
+              "**ld** (Livello Difficoltà): Modificatore al VS (⚠️ **LD è sulla DESTRA**: VS_effettivo = VS + LD) - *Opzionale, default: 0*\n"
+              "**verbose**: Mostra la legenda completa (true/false) - *Opzionale, default: false*",
         inline=False
     )
     
@@ -378,9 +416,10 @@ async def alea99_help(interaction: discord.Interaction):
     
     embed.add_field(
         name="Esempi Pratici",
-        value="`/alea99 n:3 vs:45 ld:5` - Tira 3d10 con VS 45 e LD +5 (VS Effettivo = 50)\n"
-              "`/alea99 n:4 vs:60 verbose:true` - Tira 4d10, mostra legenda completa\n"
-              "`/alea99 n:2 vs:30 ld:-10` - Tira 2d10 con difficoltà ridotta",
+        value="`/alea99 vs:50` - Tira 2d10 (default) con VS 50\n"
+              "`/alea99 vs:45 n:3 ld:5` - Tira 3d10 con VS 45 e LD +5 (VS Effettivo = 50)\n"
+              "`/alea99 vs:60 n:4 verbose:true` - Tira 4d10 con VS 60, mostra legenda\n"
+              "`/alea99 vs:30 ld:-10` - Tira 2d10 con VS 30 e LD -10 (VS Effettivo = 20)",
         inline=False
     )
     
@@ -390,6 +429,15 @@ async def alea99_help(interaction: discord.Interaction):
               "Questi numeri hanno **sempre** conseguenze critiche:\n"
               "✅ Successo se ≤ VS Effettivo (Successo Assoluto)\n"
               "❌ Fallimento se > VS Effettivo (Fallimento Critico)",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="⚠️ Differenza rispetto a /alea Classico",
+        value="**ALEA Classico:** LD è sulla **SINISTRA** della disequazione\n"
+              "→ TM = 1d100 + LD, confronto: TM ≤ VS\n\n"
+              "**ALEA99:** LD è sulla **DESTRA** della disequazione\n"
+              "→ Risultato ≤ VS_effettivo = VS + LD",
         inline=False
     )
     
