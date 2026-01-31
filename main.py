@@ -38,6 +38,67 @@ def load_thresholds():
 
 THRESHOLDS, SUCCESS_LABELS, SUCCESS_ACRONYMS = load_thresholds()  # Load at startup
 
+# === Format Success Levels with Dynamic Intervals ===
+def format_success_levels():
+    """
+    Genera la sezione Gradi di Successo dal file thresholds.csv con intervalli dinamici.
+    Divide i livelli in Successi (S) e Fallimenti (F) con VS (100%) come spartiacque.
+    """
+    if not THRESHOLDS or len(THRESHOLDS) == 0:
+        return "Nessun livello di successo configurato."
+    
+    # Separa successi (threshold < 1.0) e fallimenti (threshold >= 1.0)
+    successi = [(THRESHOLDS[i], SUCCESS_LABELS[i]) for i in range(len(THRESHOLDS)) if THRESHOLDS[i] < 1.0]
+    fallimenti = [(THRESHOLDS[i], SUCCESS_LABELS[i]) for i in range(len(THRESHOLDS)) if THRESHOLDS[i] >= 1.0]
+    
+    lines = []
+    lines.append(f"La configurazione attuale utilizza {len(THRESHOLDS)} livelli di successo:\n")
+    
+    # Aggiungi i successi (da S_n a S1, da più raro a meno raro)
+    for idx, (threshold, label) in enumerate(successi):
+        level_num = len(successi) - idx  # S_n, S_(n-1), ..., S1
+        emoji = "🟢"
+        
+        if idx == 0:
+            # Primo successo (più raro): da 0% al primo threshold
+            interval = f"[meno di {threshold*100:.0f}%]"
+        else:
+            # Successi intermedi: tra due threshold
+            prev_threshold = successi[idx-1][0]
+            interval = f"[{prev_threshold*100:.0f}% - {threshold*100:.0f}%]"
+        
+        lines.append(f"{emoji} S{level_num} {interval} {label}")
+    
+    # Aggiungi i fallimenti (da F1 a F_m, da meno raro a più raro)
+    for idx, (threshold, label) in enumerate(fallimenti):
+        level_num = idx + 1  # F1, F2, F3, ...
+        
+        # Emoji: rossa per fallimenti, nera per fallimento critico (ultimo)
+        if idx == len(fallimenti) - 1:
+            emoji = "⚫"
+        else:
+            emoji = "🔴"
+        
+        if idx == 0:
+            # Primo fallimento: dal confine (ultimo successo o 0%) al primo fallimento
+            if len(successi) > 0:
+                prev_threshold = successi[-1][0]
+                interval = f"[{prev_threshold*100:.0f}% - {threshold*100:.0f}%]"
+            else:
+                interval = f"[0% - {threshold*100:.0f}%]"
+        elif idx == len(fallimenti) - 1:
+            # Ultimo fallimento (critico): oltre il precedente
+            prev_threshold = fallimenti[idx-1][0]
+            interval = f"[più di {prev_threshold*100:.0f}%]"
+        else:
+            # Fallimenti intermedi: tra due threshold
+            prev_threshold = fallimenti[idx-1][0]
+            interval = f"[{prev_threshold*100:.0f}% - {threshold*100:.0f}%]"
+        
+        lines.append(f"{emoji} F{level_num} {interval} {label}")
+    
+    return "\n".join(lines)
+
 # === Initialize Discord Bot ===
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -136,9 +197,7 @@ async def alea_help(interaction: discord.Interaction):
     
     embed.add_field(
         name="Gradi di Successo",
-        value=f"Il sistema ALEA utilizza {len(SUCCESS_LABELS)} livelli di successo:\n" + 
-              "\n".join([f"**{SUCCESS_LABELS[i]} ({SUCCESS_ACRONYMS[i]})** - Soglia {THRESHOLDS[i]*100:.0f}%" 
-                        for i in range(len(SUCCESS_LABELS))]),
+        value=format_success_levels(),
         inline=False
     )
     
