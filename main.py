@@ -222,7 +222,116 @@ async def on_ready():
         except Exception as e:
             print(f"Errore nella sincronizzazione dei comandi: {e}")
 
-def dice_roll(vs, ld, lucky_number=None):
+# === ALEA99 System ===
+def dice_roll_alea99(n, vs, ld):
+    """
+    Sistema ALEA99: tira N d10, prende i 2 più bassi, calcola risultato come numero 2-cifre.
+    VS_effettivo = VS + LD
+    
+    Gradi di Successo:
+    - Successo Assoluto (SA): cifre identiche e <= VS_effettivo
+    - Successo Pieno (SP): cifre diverse e <= VS_effettivo
+    - Fallimento Pieno (FP): cifre diverse e > VS_effettivo
+    - Fallimento Critico (FC): cifre identiche e > VS_effettivo
+    """
+    # Tira N d10 [0..9]
+    rolls = [random.randint(0, 9) for _ in range(n)]
+    
+    # Ordina e prendi i 2 più bassi
+    rolls_sorted = sorted(rolls)
+    two_lowest = rolls_sorted[:2]
+    
+    # Forma il numero: primo dado è decina, secondo è unità
+    result_value = two_lowest[0] * 10 + two_lowest[1]
+    
+    # Calcola VS effettivo
+    vs_effective = vs + ld
+    
+    # Determina grado di successo
+    has_identical_digits = two_lowest[0] == two_lowest[1]
+    is_success = result_value <= vs_effective
+    
+    if has_identical_digits and is_success:
+        success_level = "Successo Assoluto"
+        acronym = "SA"
+    elif has_identical_digits and not is_success:
+        success_level = "Fallimento Critico"
+        acronym = "FC"
+    elif not has_identical_digits and is_success:
+        success_level = "Successo Pieno"
+        acronym = "SP"
+    else:  # not has_identical_digits and not is_success
+        success_level = "Fallimento Pieno"
+        acronym = "FP"
+    
+    return {
+        "Numero Dadi": n,
+        "Tiri Completi": rolls,
+        "Due Più Bassi": two_lowest,
+        "Risultato": result_value,
+        "VS (Valore Soglia)": vs,
+        "LD (Livello Difficoltà)": ld,
+        "VS Effettivo": vs_effective,
+        "Cifre Identiche": has_identical_digits,
+        "Successo Level": success_level,
+        "Acronym": acronym
+    }
+
+@bot.tree.command(name="alea99", description="Effettua un tiro ALEA99 (Nd10)")
+async def alea99(interaction: discord.Interaction, n: int, vs: int, ld: int = 0, verbose: bool = False):
+    """Effettua un tiro ALEA99 con N d10"""
+    
+    # Validate n parameter
+    if n < 2 or n > 5:
+        await interaction.response.send_message("❌ Il numero di dadi deve essere tra 2 e 5 (N ∈ {2, 3, 4, 5})", ephemeral=True)
+        return
+    
+    await interaction.response.defer()
+    
+    result = dice_roll_alea99(n, vs, ld)
+    
+    # Format the rolls display
+    rolls_display = " ".join([f"`{d}`" for d in result["Tiri Completi"]])
+    two_lowest_display = " ".join([f"**{d}**" for d in result["Due Più Bassi"]])
+    
+    # Create embed
+    embed = discord.Embed(
+        title=f"🎲 **{result['Risultato']:02d}** - {result['Acronym']}",
+        description=result['Successo Level'],
+        color=discord.Color.green() if "Successo" in result['Successo Level'] else discord.Color.red()
+    )
+    
+    embed.add_field(
+        name=f"Tiri {n}d10",
+        value=f"Tutti i tiri: {rolls_display}\n"
+              f"Due più bassi: {two_lowest_display}",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Valori",
+        value=f"**VS (Valore Soglia):** `{result['VS (Valore Soglia)']}`\n"
+              f"**LD (Livello Difficoltà):** `{result['LD (Livello Difficoltà)']}`\n"
+              f"**VS Effettivo:** `{result['VS Effettivo']}`\n"
+              f"**Cifre identiche:** {'Sì 🟢' if result['Cifre Identiche'] else 'No'}",
+        inline=False
+    )
+    
+    if verbose:
+        embed.add_field(
+            name="Legenda Gradi di Successo",
+            value="🟢 **Successo Assoluto (SA):** Cifre identiche e ≤ VS Effettivo\n"
+                  "🟡 **Successo Pieno (SP):** Cifre diverse e ≤ VS Effettivo\n"
+                  "🔴 **Fallimento Pieno (FP):** Cifre diverse e > VS Effettivo\n"
+                  "⚫ **Fallimento Critico (FC):** Cifre identiche e > VS Effettivo",
+            inline=False
+        )
+    
+    embed.set_footer(text="Sistema ALEA99 - Tiro Nd10")
+    
+    await interaction.followup.send(embed=embed)
+
+
     first_roll = random.randint(1, 100)
     final_roll = first_roll
     tiro_aperto = False
