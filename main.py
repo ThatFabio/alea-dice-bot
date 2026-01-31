@@ -331,8 +331,73 @@ async def alea99(interaction: discord.Interaction, n: int, vs: int, ld: int = 0,
     
     await interaction.followup.send(embed=embed)
 
+@bot.tree.command(name="alea99-help", description="Mostra aiuto su come usare il comando /alea99")
+async def alea99_help(interaction: discord.Interaction):
+    """Mostra aiuto su come usare il comando /alea99"""
+    
+    embed = discord.Embed(
+        title="📖 Guida al Comando /alea99",
+        description="Sistema ALEA99: Nd10 con i 2 dadi più bassi",
+        color=discord.Color.blue()
+    )
+    
+    embed.add_field(
+        name="Utilizzo Base",
+        value="`/alea99 n:4 vs:50`\n\nTira 4d10, estrae i 2 più bassi, e confronta con Valore Soglia 50.",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Parametri",
+        value="**n** (Numero dadi): Quanti d10 tirare {2, 3, 4, 5} - *Obbligatorio*\n"
+              "**vs** (Valore Soglia): Soglia di confronto (0-99) - *Obbligatorio*\n"
+              "**ld** (Livello Difficoltà): Modificatore al VS (-60 a +60) - *Opzionale, default: 0*\n"
+              "**Verbose**: Mostra la legenda completa (true/false) - *Opzionale, default: false*",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Come Funziona",
+        value="1️⃣ Si tirano **N d10** (valori da 0 a 9)\n"
+              "2️⃣ Si **ordinano dal più basso al più alto**\n"
+              "3️⃣ Si **prendono solo i 2 più bassi**\n"
+              "4️⃣ Si forma un numero a 2 cifre: **[decina][unità]**\n"
+              "5️⃣ Si confronta con **VS Effettivo = VS + LD**\n\n"
+              "**Esempio:** N=4 → tiri [6, 2, 8, 1] → ordinati [1, 2, 6, 8] → **12** (mai 21)",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Gradi di Successo",
+        value="🟢 **Successo Assoluto (SA):** Cifre identiche (11, 22, 33...) e ≤ VS Effettivo\n"
+              "🟡 **Successo Pieno (SP):** Cifre diverse e ≤ VS Effettivo\n"
+              "🔴 **Fallimento Pieno (FP):** Cifre diverse e > VS Effettivo\n"
+              "⚫ **Fallimento Critico (FC):** Cifre identiche (11, 22, 33...) e > VS Effettivo",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Esempi Pratici",
+        value="`/alea99 n:3 vs:45 ld:5` - Tira 3d10 con VS 45 e LD +5 (VS Effettivo = 50)\n"
+              "`/alea99 n:4 vs:60 verbose:true` - Tira 4d10, mostra legenda completa\n"
+              "`/alea99 n:2 vs:30 ld:-10` - Tira 2d10 con difficoltà ridotta",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Tabella Cifre Identiche",
+        value="00, 11, 22, 33, 44, 55, 66, 77, 88, 99\n\n"
+              "Questi numeri hanno **sempre** conseguenze critiche:\n"
+              "✅ Successo se ≤ VS Effettivo (Successo Assoluto)\n"
+              "❌ Fallimento se > VS Effettivo (Fallimento Critico)",
+        inline=False
+    )
+    
+    embed.set_footer(text="Sistema ALEA99 - Tiro Nd10")
+    
+    await interaction.response.send_message(embed=embed)
 
-    first_roll = random.randint(1, 100)
+
     final_roll = first_roll
     tiro_aperto = False
     reroll_value = None
