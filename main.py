@@ -321,13 +321,95 @@ def dice_roll_alea99(n, vs, ld):
         "Acronym": acronym
     }
 
-@bot.tree.command(name="alea99", description="Effettua un tiro ALEA99 (Nd10)")
-async def alea99(interaction: discord.Interaction, vs: int, spec: int = 0, ld: int = 0, verbose: bool = False):
-    """Effettua un tiro ALEA99 con N d10. N = 2 + SPEC"""
+def parse_ld(ld_input):
+    """
+    Parsa LD da molteplici formati:
+    - Numerico: -60, -30, 0, 30, 60
+    - Numerico narrativo: -3, -2, -1, 0, 1, 2, 3 (moltiplicato per 20)
+    - Narrativo corto: FFF, FF, F, M, D, DD, DDD
+    - Narrativo lungo: Banale, Facilissima, Facile, Media, Difficile, Difficilissima, Estrema
+    Ritorna valore numerico in [-60, 60]
+    """
+    ld_input = str(ld_input).strip().upper()
     
-    # Validate spec parameter (0, 1, 2, 3)
+    # Mappa narrativa lunga
+    narrativa_lunga = {
+        "BANALE": -60,
+        "FACILISSIMA": -40,
+        "FACILE": -20,
+        "MEDIA": 0,
+        "DIFFICILE": 20,
+        "DIFFICILISSIMA": 40,
+        "ESTREMA": 60,
+    }
+    
+    # Mappa narrativa corta
+    narrativa_corta = {
+        "FFF": -60,
+        "FF": -40,
+        "F": -20,
+        "M": 0,
+        "D": 20,
+        "DD": 40,
+        "DDD": 60,
+    }
+    
+    # Prova narrativa lunga
+    if ld_input in narrativa_lunga:
+        return narrativa_lunga[ld_input]
+    
+    # Prova narrativa corta
+    if ld_input in narrativa_corta:
+        return narrativa_corta[ld_input]
+    
+    # Prova numerico narrativo (-3 a +3)
+    try:
+        ld_num = int(ld_input)
+        if -3 <= ld_num <= 3:
+            return ld_num * 20
+        elif -60 <= ld_num <= 60 and ld_num % 20 == 0:
+            return ld_num
+    except ValueError:
+        pass
+    
+    return None
+
+@bot.tree.command(name="alea99", description="Effettua un tiro ALEA99 - Nd10 (best 2)")
+async def alea99(interaction: discord.Interaction, 
+                 vs: int,
+                 spec: int = 0,
+                 ld: str = "0",
+                 verbose: bool = False):
+    """
+    Effettua un tiro ALEA99 (Nd10 best 2).
+    
+    vs (Valore Soglia): 0-99 - *Obbligatorio*
+    spec (Specializzazione): 0-3 (converte a N = 2+SPEC → 2d10 a 5d10) - *Opzionale, default: 0*
+    ld (Livello Difficoltà): supporta molteplici formati - *Opzionale, default: 0*
+        - Numerico: -60, -30, 0, 30, 60
+        - Narrativo numerico: -3, -2, -1, 0, 1, 2, 3
+        - Narrativo corto: FFF, FF, F, M, D, DD, DDD
+        - Narrativo lungo: Banale, Facilissima, Facile, Media, Difficile, Difficilissima, Estrema
+    verbose: mostra tutti i Gradi di Successo (default: False)
+    """
+    
+    # Valida VS
+    if vs < 0 or vs > 99:
+        await interaction.response.send_message("❌ VS deve essere tra 0 e 99", ephemeral=True)
+        return
+    
+    # Valida SPEC
     if spec < 0 or spec > 3:
         await interaction.response.send_message("❌ SPEC deve essere 0, 1, 2 o 3 (N = 2+SPEC, quindi 2-5 dadi)", ephemeral=True)
+        return
+    
+    # Parsa LD
+    ld_value = parse_ld(ld)
+    if ld_value is None:
+        await interaction.response.send_message(
+            "❌ LD non riconosciuto. Usa: `-60` a `+60`, oppure `-3` a `+3`, oppure `FFF/FF/F/M/D/DD/DDD`, oppure `Banale/Facilissima/Facile/Media/Difficile/Difficilissima/Estrema`",
+            ephemeral=True
+        )
         return
     
     # Calcola N da SPEC: N = 2 + SPEC
@@ -335,7 +417,7 @@ async def alea99(interaction: discord.Interaction, vs: int, spec: int = 0, ld: i
     
     await interaction.response.defer()
     
-    result = dice_roll_alea99(n, vs, ld)
+    result = dice_roll_alea99(n, vs, ld_value)
         # Format the rolls display
     rolls_display = " ".join([f"`{d}`" for d in result["Tiri Completi"]])
     two_lowest_display = " ".join([f"**{d}**" for d in result["Due Più Bassi"]])
