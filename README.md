@@ -4,16 +4,49 @@ Un bot Discord con slash command per il sistema di gioco di ruolo tabulare **ALE
 
 ## Funzionalità
 
-- **`/alea vs:VALORE [ld:MODIFICATORE] [verbose:BOOLEANO]`** - Esegui tiri ALEA (1d100)
-  - `vs` (Valore Soglia): Valore richiesto (obbligatorio)
-  - `ld` (Livello Difficoltà): Modificatore difficoltà (-60 a +60, opzionale, default: 0)
-  - `verbose` (Booleano): Mostra tutti i Gradi di Successo o solo il risultato (opzionale, default: false)
+### Sistema ALEA Classico (1d100)
 
-- **`/alea-help`** - Mostra la guida d'uso e documentazione sui Gradi di Successo in italiano
+- **`/alea vs:VALORE [ld:MODIFICATORE] [car:CAR] [abi:ABI] [spec:SPEC] [lf:FERITE] [la:AFFATICAMENTO] [ls:STORDIMENTO] [verbose:BOOL]`** - Tiro ALEA completo con supporto MISO
+  - **Parametri Base:**
+    - `vs` (Valore Soglia): Valore richiesto *oppure* calcolato da CAR+ABI+SPEC (0-999+)
+    - `ld` (Livello Difficoltà): Modificatore difficoltà (-60 a +60, opzionale, default: 0)
+    - `verbose` (Booleano): Mostra tutti i Gradi di Successo o solo il risultato (opzionale, default: false)
+  
+  - **Parametri MISO Avanzati (Opzionali):**
+    - `car` (Caratteristica): Valore caratteristica (0-50+)
+    - `abi` (Abilità): Valore abilità (0-100+)
+    - `spec` (Specializzazione): Specializzazione bonus {0, 20, 30}
+    - `lf` (Livello Ferite): Livello ferite (0-10)
+    - `la` (Livello Affaticamento): Livello affaticamento (0-4)
+    - `ls` (Livello Stordimento): Livello stordimento (0-4)
+  
+  - **Esempi:**
+    - `/alea vs:80` - Tiro semplice con VS 80
+    - `/alea car:25 abi:45 spec:20` - VS calcolato (25+45+20=90)
+    - `/alea vs:60 lf:5 la:1 ld:10` - Con stati e modificatori
 
-- **Tiro Aperto**: Reroll automatici su tiri critici (1-5, 96-100)
+### Sistema ALEA99 (Nd10)
+
+- **`/alea99 vs:VALORE [n:NUMERO_DADI] [ld:MODIFICATORE] [verbose:BOOL]`** - Tiro ALEA99 con dadi d10
+  - `vs` (Valore Soglia): Valore richiesto (0-99, obbligatorio)
+  - `n` (Numero dadi): Quantità di d10 {2, 3, 4, 5} (opzionale, default: 2)
+  - `ld` (Livello Difficoltà): ⚠️ Modificatore **sulla destra**: VS_effettivo = VS + LD (opzionale, default: 0)
+  - `verbose` (Booleano): Mostra la legenda completa (opzionale, default: false)
+  
+  - **Esempi:**
+    - `/alea99 vs:50` - Tira 2d10 con VS 50
+    - `/alea99 vs:45 n:4 ld:5` - Tira 4d10 con VS 45 e LD +5 (VS_effettivo = 50)
+
+### Comandi di Aiuto
+
+- **`/alea-help`** - Guida completa al sistema ALEA con formule e parametri
+
+- **`/alea99-help`** - Guida al sistema ALEA99 con spiegazione delle cifre identiche
+
+- **Tiro Aperto** (ALEA classico): Reroll automatici su tiri critici (1-5, 96-100)
 
 - **Livelli Successo Configurabili**: Modifica `thresholds.csv` per personalizzare i Gradi di Successo per campagna
+
 
 ## Distribuzione Attuale
 
@@ -179,7 +212,60 @@ ssh -i YOUR_KEY.key ubuntu@80.225.89.179 "sudo -u deploy cat /home/deploy/alea-d
 ssh -i YOUR_KEY.key ubuntu@80.225.89.179 "cd /home/deploy/alea-dice-bot && sudo -u deploy git pull origin main"
 ```
 
+## Formalizzazione del Sistema MISO
+
+### Tiro Manovra (TM) - ALEA Classico
+
+**Formula Completa:**
+```
+VS_baseline = CAR + ABI + SPEC
+M_Stato = malus_ferite + malus_affaticamento + malus_stordimento
+TM = 1d100 + LD + M_Stato
+Successo se: TM ≤ VS_baseline
+```
+
+**Parametri Opzionali Supportati:**
+- **CAR (Caratteristica)**: Caratteristica primaria base (0-50+), es. Forza, Intelligenza, Carisma
+- **ABI (Abilità)**: Livello di addestramento (0-100+)
+- **SPEC (Specializzazione)**: Bonus specialistico {0, +20, +30}
+- **LF (Livello Ferite)**: Danni subiti (0-10, dove 10 = incoscienza)
+  - LF 0-3: Salute (malus 0)
+  - LF 4-5: Ferita Leggera (malus +20)
+  - LF 6-7: Ferita Media (malus +40)
+  - LF 8-9: Ferita Grave (malus +60)
+  - LF 10: Incoscienza (incapace di agire)
+- **LA (Livello Affaticamento)**: Stanchezza (0-4, dove 4 = incoscienza)
+  - LA 0: Nessuno (malus 0)
+  - LA 1: Affaticato (malus +20)
+  - LA 2: Esausto (malus +40)
+  - LA 3: Morto di stanchezza (malus +60)
+  - LA 4: Incoscienza (incapace di agire)
+- **LS (Livello Stordimento)**: Disorientamento (0-4, dove 4 = incoscienza)
+  - LS 0-3: Come LA
+  - LS 4: Incoscienza (incapace di agire)
+
+### Sistema ALEA99 (Alternativo)
+
+**Formula:**
+```
+Risultato = Nd10, prendi i 2 dadi più bassi ordinati
+VS_effettivo = VS + LD  (LD sulla DESTRA, a differenza di ALEA)
+Successo se: Risultato ≤ VS_effettivo
+
+Cifre identiche (00, 11, 22...):
+  - Successo Assoluto se ≤ VS_effettivo
+  - Fallimento Critico se > VS_effettivo
+```
+
+### Differenza LD (Posizionamento)
+
+| Sistema | Formula | Effetto di LD |
+|---------|---------|--------------|
+| **ALEA Classico** | TM = 1d100 + LD ≤ VS | LD sulla **sinistra** (modifica il tiro) |
+| **ALEA99** | Risultato ≤ VS + LD | LD sulla **destra** (modifica la soglia) |
+
 ## Architettura Sistema
+
 
 **Flusso Distribuzione:**
 ```
