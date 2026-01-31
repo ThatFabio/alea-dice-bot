@@ -47,9 +47,9 @@ def format_success_levels():
     if not THRESHOLDS or len(THRESHOLDS) == 0:
         return "Nessun livello di successo configurato."
     
-    # Separa successi (threshold < 1.0) e fallimenti (threshold >= 1.0)
-    successi = [(THRESHOLDS[i], SUCCESS_LABELS[i]) for i in range(len(THRESHOLDS)) if THRESHOLDS[i] < 1.0]
-    fallimenti = [(THRESHOLDS[i], SUCCESS_LABELS[i]) for i in range(len(THRESHOLDS)) if THRESHOLDS[i] >= 1.0]
+    # Separa successi (threshold <= 1.0, incluso il confine VS=100%) e fallimenti (threshold > 1.0)
+    successi = [(THRESHOLDS[i], SUCCESS_LABELS[i]) for i in range(len(THRESHOLDS)) if THRESHOLDS[i] <= 1.0]
+    fallimenti = [(THRESHOLDS[i], SUCCESS_LABELS[i]) for i in range(len(THRESHOLDS)) if THRESHOLDS[i] > 1.0]
     
     lines = []
     lines.append(f"La configurazione attuale utilizza {len(THRESHOLDS)} livelli di successo:\n")
