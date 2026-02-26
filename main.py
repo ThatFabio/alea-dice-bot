@@ -25,15 +25,39 @@ def load_thresholds():
     thresholds = []
     success_labels = []
     success_acronyms = []
-    
+
     with open("thresholds.csv", newline='', encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
-            if row[0].isdigit():  # Only append valid numeric thresholds
-                thresholds.append(float(row[0]) / 100)  # Convert % to decimal
-            success_labels.append(row[1])  # Full label
-            success_acronyms.append(row[2])  # Acronym
-    
+            # Skip empty rows or rows with insufficient columns
+            if not row or len(row) < 3:
+                continue
+
+            first = row[0].strip()
+            # Try parsing the threshold as an integer (allow floats too)
+            try:
+                val = int(first)
+            except ValueError:
+                try:
+                    val = int(float(first))
+                except Exception:
+                    continue
+
+            # Normalize and cap sentinel: do not accept negative values
+            if val < 0:
+                continue
+
+            if val > 999:
+                val = 999
+
+            thresholds.append(float(val) / 100)
+            success_labels.append(row[1].strip())
+            success_acronyms.append(row[2].strip())
+
+            # If sentinel 999 found, stop parsing further rows
+            if val == 999:
+                break
+
     return thresholds, success_labels, success_acronyms
 
 THRESHOLDS, SUCCESS_LABELS, SUCCESS_ACRONYMS = load_thresholds()  # Load at startup
@@ -99,6 +123,62 @@ def format_success_levels():
     
     return "\n".join(lines)
 
+
+def dice_roll(vs, ld, malus_stato=0, compute_label=True):
+    """
+    Perform a classic ALEA 1d100 roll applying LD (added to the roll) and state malus.
+    Handles "Tiro Aperto" (exploding) on 1-5 (subtract reroll) and 96-100 (add reroll).
+    Returns a dict with keys used by the /alea command.
+    """
+    # Primo tiro 1-100
+    primo_tiro = random.randint(1, 100)
+    final_roll = primo_tiro
+
+    tiro_aperto = False
+    reroll_value = None
+
+    # Handle "Tiro Aperto" (exploding rolls)
+    if 1 <= primo_tiro <= 5:
+        reroll_value = random.randint(1, 100)
+        final_roll -= reroll_value
+        tiro_aperto = True
+    elif 96 <= primo_tiro <= 100:
+        reroll_value = random.randint(1, 100)
+        final_roll += reroll_value
+        tiro_aperto = True
+
+    # Apply LD (classic ALEA uses LD added to the roll on the left)
+    final_roll += ld
+
+    # Apply malus from status (added to the roll)
+    try:
+        final_roll += int(malus_stato)
+    except Exception:
+        pass
+
+    # Ensure integer
+    final_roll = int(final_roll)
+
+    result_label = None
+    if compute_label:
+        # Compute human-readable result label (safe fallback to last label)
+        try:
+            idx = next((i for i, bound in enumerate(THRESHOLDS) if final_roll <= bound), len(SUCCESS_LABELS) - 1)
+            result_label = SUCCESS_LABELS[idx]
+        except Exception:
+            result_label = "Risultato sconosciuto"
+
+    return {
+        "Primo Tiro": primo_tiro,
+        "Reroll": reroll_value,
+        "Tiro Aperto": tiro_aperto,
+        "Tiro 1d100": primo_tiro,
+        "Tiro Manovra (con LD)": final_roll,
+        "Valore Soglia (VS)": vs,
+        "Livello Difficoltà (LD)": ld,
+        "Risultato": result_label
+    }
+
 # === Initialize Discord Bot ===
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -133,7 +213,27 @@ async def alea(interaction: discord.Interaction, vs: int = 0, ld: int = 0, verbo
     malus_ls = 0 if ls == 0 else (20 if ls == 1 else (40 if ls == 2 else (60 if ls == 3 else float('inf'))))
     malus_stato = malus_lf + malus_la + malus_ls
 
-    # Perform the dice roll calculations
+    # If the user invoked /alea with no parameters at all, just roll and return the final die value
+    no_params = (vs == 0 and car == 0 and abi == 0 and spec == 0 and lf == 0 and la == 0 and ls == 0 and ld == 0)
+    if no_params:
+        minimal = dice_roll(vs, ld, malus_stato, compute_label=False)
+        tiro_aperto_text = ""
+        if minimal.get("Tiro Aperto"):
+            tiro_aperto_text = f"\n**Tiro Aperto!** Il primo tiro (`{minimal['Primo Tiro']}`) ha attivato un reroll → `{minimal['Reroll']}`."
+
+        embed = discord.Embed(
+            title=f"**Tiro 1d100: {minimal['Tiro 1d100']}**",
+            description=(
+                f"**Tiro Manovra (con LD+Stati):** `{minimal['Tiro Manovra (con LD)']}`\n"
+                f"━━━━━━━━━━━━━━━\n"
+                f"(Risultato grezzo, nessun confronto con Gradi di Successo){tiro_aperto_text}"
+            ),
+            color=discord.Color.blue()
+        )
+        await interaction.followup.send(embed=embed)
+        return
+
+    # Perform the dice roll calculations (normal flow)
     result = dice_roll(vs, ld, malus_stato)
 
     # Compute Success Boundaries (Highest number of each category)
@@ -146,9 +246,17 @@ async def alea(interaction: discord.Interaction, vs: int = 0, ld: int = 0, verbo
     def format_range(low, high):
         return f"[{low} - {high}]"  # No leading zeros
 
-    # Get the range of the achieved success level
-    low = boundaries[position-1] + 1 if position > 0 else 1
-    high = boundaries[position]
+    # Get the range of the achieved success level (safe for out-of-range)
+    if boundaries:
+        if position < len(boundaries):
+            low = boundaries[position-1] + 1 if position > 0 else 1
+            high = boundaries[position]
+        else:
+            low = boundaries[-1] + 1
+            high = boundaries[-1]
+    else:
+        low = 1
+        high = vs
     range_text = format_range(low, high)
 
     # Handle "Tiro Aperto" (Exploding Rolls)
@@ -537,36 +645,6 @@ async def alea99_help(interaction: discord.Interaction):
     
     await interaction.response.send_message(embed=embed)
 
-
-    final_roll = first_roll
-    tiro_aperto = False
-    reroll_value = None
-
-    # Handle "Tiro Aperto" logic
-    if first_roll in range(1, 6):  
-        reroll_value = random.randint(1, 100)
-        final_roll -= reroll_value
-        tiro_aperto = True
-    elif first_roll in range(96, 101):  
-        reroll_value = random.randint(1, 100)
-        final_roll += reroll_value
-        tiro_aperto = True
-
-    final_roll += ld
-
-    ratio = (final_roll / vs) * 100 if vs > 0 else float('inf')
-    result = SUCCESS_LABELS[next((i for i, bound in enumerate(THRESHOLDS) if final_roll <= bound), len(SUCCESS_LABELS) - 1)]
-
-    return {
-        "Primo Tiro": first_roll,
-        "Reroll": reroll_value,
-        "Tiro Aperto": tiro_aperto,
-        "Tiro 1d100": first_roll,
-        "Tiro Manovra (con LD)": final_roll,
-        "Valore Soglia (VS)": vs,
-        "Livello Difficoltà (LD)": ld,
-        "Risultato": result
-    }
 
 # === Run Flask Keep-Alive Server in a Separate Thread ===
 server_thread = threading.Thread(target=run_server)
