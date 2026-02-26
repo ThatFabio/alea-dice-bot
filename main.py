@@ -197,6 +197,27 @@ async def alea(interaction: discord.Interaction, vs: int = 0, ld: int = 0, verbo
         return
     spec_value = {0: 0, 1: 20, 2: 30}[spec]
     
+    # Allow shorthand call like "/alea 50" — try to extract first raw option value if vs is still 0
+    if vs == 0:
+        try:
+            data = getattr(interaction, 'data', None)
+            if data:
+                opts = data.get('options', [])
+                if opts:
+                    # find first option with a concrete value
+                    for o in opts:
+                        if 'value' in o:
+                            try:
+                                maybe_vs = int(o['value'])
+                                if maybe_vs >= 0:
+                                    vs = maybe_vs
+                                    break
+                            except Exception:
+                                # not an integer, ignore
+                                pass
+        except Exception:
+            pass
+
     # Se VS non è fornito direttamente, calcola da CAR+ABI+SPEC
     if vs == 0 and (car > 0 or abi > 0 or spec > 0):
         vs = car + abi + spec_value
