@@ -257,28 +257,42 @@ async def alea(interaction: discord.Interaction, vs: int = 0, ld: int = 0, verbo
     # Perform the dice roll calculations (normal flow)
     result = dice_roll(vs, ld, malus_stato)
 
-    # Compute Success Boundaries (Highest number of each category)
-    boundaries = [round(vs * threshold) for threshold in THRESHOLDS]
-
-    # Identify where the result falls
-    position = next((i for i, bound in enumerate(boundaries) if result["Tiro Manovra (con LD)"] <= bound), len(boundaries))
-
-    # Ensure proper range formatting
-    def format_range(low, high):
-        return f"[{low} - {high}]"  # No leading zeros
-
-    # Get the range of the achieved success level (safe for out-of-range)
-    if boundaries:
-        if position < len(boundaries):
-            low = boundaries[position-1] + 1 if position > 0 else 1
-            high = boundaries[position]
-        else:
-            low = boundaries[-1] + 1
-            high = boundaries[-1]
+    # Compute Success Boundaries (exclude sentinel last threshold from numeric calcs)
+    if len(THRESHOLDS) > 1:
+        numeric_thresholds = THRESHOLDS[:-1]
     else:
-        low = 1
-        high = vs
-    range_text = format_range(low, high)
+        numeric_thresholds = THRESHOLDS
+
+    boundaries = [round(vs * t) for t in numeric_thresholds]
+
+    # Determine label index: first boundary <= final roll -> corresponding label index
+    final_value = result["Tiro Manovra (con LD)"]
+    label_index = None
+    for i, b in enumerate(boundaries):
+        if final_value <= b:
+            label_index = i
+            break
+    if label_index is None:
+        # above all numeric boundaries -> Fallimento Critico (last label)
+        label_index = len(SUCCESS_LABELS) - 1
+
+    # Ensure proper range formatting with open extremes
+    def format_range(label_i):
+        if len(boundaries) == 0:
+            return f"[1 - {vs}]"
+        # First label: everything below first boundary (open lower)
+        if label_i == 0:
+            return f"[meno di {boundaries[0]}]"
+        # Last label (Fallimento Critico): anything above the last numeric boundary
+        if label_i == len(SUCCESS_LABELS) - 1:
+            prev = boundaries[-1]
+            return f"[più di {prev}]"
+        # Middle labels: closed interval
+        low = boundaries[label_i-1] + 1
+        high = boundaries[label_i]
+        return f"[{low} - {high}]"
+
+    range_text = format_range(label_index)
 
     # Handle "Tiro Aperto" (Exploding Rolls)
     tiro_aperto_text = ""
@@ -287,15 +301,14 @@ async def alea(interaction: discord.Interaction, vs: int = 0, ld: int = 0, verbo
 
     # Format output based on verbosity
     if not verbose:
-        summary = f"## {SUCCESS_LABELS[position]} {range_text}"
+        summary = f"## {SUCCESS_LABELS[label_index]} {range_text}"
     else:
         summary = ""
-        for i in range(len(boundaries)):
-            low = boundaries[i-1] + 1 if i > 0 else 1
-            high = boundaries[i]
-            range_text = format_range(low, high)
-            checkmark = " ✅" if i == position else ""
-            summary += f"**{SUCCESS_LABELS[i]}** {range_text}{checkmark}\n"
+        # iterate all labels, including final Fallimento Critico
+        for i in range(len(SUCCESS_LABELS)):
+            rtext = format_range(i)
+            checkmark = " ✅" if i == label_index else ""
+            summary += f"**{SUCCESS_LABELS[i]}** {rtext}{checkmark}\n"
 
     # Create an embed message
     # Crea stringa parametri aggiuntivi se forniti
