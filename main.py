@@ -680,6 +680,58 @@ async def alea99_help(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 
+@bot.tree.command(name="embed-test", description="Anteprima embed ALEA (opzionale: vs)")
+async def embed_test(interaction: discord.Interaction, vs: int = 0, verbose: bool = False):
+    """Prototype embed for ALEA results. Use `/embed-test` or `/embed-test vs:50`."""
+    await interaction.response.defer()
+
+    # If vs supplied, produce labeled result, otherwise minimal raw roll
+    malus_stato = 0
+    if vs == 0:
+        res = dice_roll(0, 0, malus_stato, compute_label=False)
+    else:
+        res = dice_roll(vs, 0, malus_stato, compute_label=True)
+
+    # Small responsive visual bar (10 segments) — safe for narrow screens
+    def build_bar(value, cap):
+        try:
+            pct = min(max(value / max(1, cap), 0.0), 1.0)
+        except Exception:
+            pct = 0.0
+        filled = int(round(pct * 10))
+        empty = 10 - filled
+        return "".join(["🟩" for _ in range(filled)]) + "".join(["⬜" for _ in range(empty)])
+
+    # Prepare compact fields
+    if vs == 0:
+        title = f"🎲 Tiro 1d100: {res['Tiro 1d100']}"
+        description = f"Risultato grezzo — nessun confronto con Gradi di Successo"
+    else:
+        title = f"🎲 Tiro 1d100: {res['Tiro 1d100']} — {res.get('Risultato', '')}"
+        description = f"VS: {vs} | TM: {res['Tiro Manovra (con LD)']}"
+
+    embed = discord.Embed(title=title, description=description, color=discord.Color.blurple())
+
+    # Add compact inline stats to avoid wrapping long lines
+    embed.add_field(name="TM (con LD)", value=f"{res['Tiro Manovra (con LD)']}", inline=True)
+    embed.add_field(name="VS", value=f"{vs}", inline=True)
+    embed.add_field(name="Tiro Aperto", value=("Sì" if res.get("Tiro Aperto") else "No"), inline=True)
+
+    # Visual bar only when VS provided
+    if vs > 0:
+        bar = build_bar(res['Tiro Manovra (con LD)'], max(1, vs))
+        embed.add_field(name="Progresso vs", value=bar, inline=False)
+
+    # Verbose: list ranges from thresholds (short lines)
+    if verbose and len(SUCCESS_LABELS) > 0:
+        legend = "\n".join([f"{i+1}. {lbl}" for i, lbl in enumerate(SUCCESS_LABELS)])
+        embed.add_field(name="Legenda (brevi)", value=legend, inline=False)
+
+    embed.set_footer(text="Anteprima embed ALEA — visuale compatta per tutte le larghezze")
+
+    await interaction.followup.send(embed=embed)
+
+
 # === Run Flask Keep-Alive Server in a Separate Thread ===
 server_thread = threading.Thread(target=run_server)
 server_thread.start()
