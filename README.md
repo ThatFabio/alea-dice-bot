@@ -1,6 +1,6 @@
 # Bot Discord ALEA
 
-Un bot Discord con slash command per il sistema di gioco di ruolo tabulare **ALEA GdR**. Esegue tiri di dadi con supporto dinamico per i Gradi di Successo.
+Un bot Discord con slash command per il sistema di gioco di ruolo **ALEA**. Esegue tiri di dadi con supporto dinamico per i Gradi di Successo.
 
 ## Funzionalità
 
